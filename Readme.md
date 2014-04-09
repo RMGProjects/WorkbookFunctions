@@ -492,7 +492,7 @@ An example call might look like:
 
 ```python
 values = col_vals.get_values(4)
-'''
+```
 
 The above will return a list of the values found in row 4 at the columns referenced by the list passed to the `Columns` object creator. 
 
