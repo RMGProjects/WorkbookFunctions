@@ -118,16 +118,16 @@ class Dates:
 		strp_format	: string
 		separator	: None or string
 		index_pos	: None or int
-		
+
 		Class for getting dates from worksheets, converting strings to datetime
 		objects, and checking date patterns in multiple worksheets.\n
-		
+
 		Initialise class by passing date cell reference. If dates on worksheets
 		are already thought to be directly readable by DataNitro as datetime objects
-		then no further arguments need be passed. If some string formatting is 
+		then no further arguments need be passed. If some string formatting is
 		needed before passing string value to datetime.strptime() function used in
 		converting strings to dates, then additional arguments needed. \n
-		
+
 		Available Methods \n
 		get_value	: get value of date cell on active sheet
 		cell_to_date	: get datetime object string in date cell on active sheet
@@ -173,14 +173,14 @@ class Dates:
 		"""
 		return	: datetime.datetime or None
 		method	: visible
-		
+
 		Returns datetime object of value of self.get_value() formatted according to
-		strp_format on active sheet. If separator is specified self.get_value() is 
-		split and the value at index position index_pos is formatted according to 
+		strp_format on active sheet. If separator is specified self.get_value() is
+		split and the value at index position index_pos is formatted according to
 		strp_format and returned.\n
-		Returns None if format to datetime object not possible. 
+		Returns None if format to datetime object not possible.
 		"""
-	
+
 		if not self.strp_format:
 			date_object = self.__get_value()
 			if isinstance(date_object, datetime.datetime):
@@ -195,17 +195,17 @@ class Dates:
 				return None
 		else:
 			try:
-				stripped_string = self.__get_value().split(separator)[self.index_pos]
+				stripped_string = self.__get_value().split(self.separator)[self.index_pos]
 				date_object = datetime.datetime.strptime(stripped_string, self.strp_format)
 				return date_object.date()
 			except ValueError:
 				return None
-				
+
 	def __update_date_dict(self, date_object, date_dict):
 		"""
 		return 	: None
 		method	: hidden
-		
+
 		Updates date_dict if date_object is not None
 		"""
 		if date_object:
@@ -214,15 +214,15 @@ class Dates:
 		else:
 			date_dict[active_sheet()] = 'Date not found on this sheet'
 			return
-		
+
 	def check_all_dates(self):
 		"""
 		return	: dict
 		method	: visible
-		
-		Returns dict of sheet keys and values that are datetime objects created by 
-		calling	cell_to_date() with arguments passed in intialisation call. If no 
-		datetime object is created a string message to user is the key value. 
+
+		Returns dict of sheet keys and values that are datetime objects created by
+		calling	cell_to_date() with arguments passed in intialisation call. If no
+		datetime object is created a string message to user is the key value.
 		"""
 		sheets = all_sheets()
 		date_dict = {sheet : object() for sheet in sheets}
@@ -231,19 +231,19 @@ class Dates:
 			date_object = self.cell_to_date()
 			self.__update_date_dict(date_object, date_dict)
 		return date_dict
-		
+
 	def find_duplicates(self, date_dict = None):
 		"""
 		date_dict : dict or None
 		return	: dict
 		method	: visible
-		
-		Returns a dictionary where dates that are found more than once in the values 
-		of date_dict are the keys, and the values are the keys of date_dict at which 
-		the duplicate dates are found. Only accepts a date_dict whose values are all 
+
+		Returns a dictionary where dates that are found more than once in the values
+		of date_dict are the keys, and the values are the keys of date_dict at which
+		the duplicate dates are found. Only accepts a date_dict whose values are all
 		datetime.dateimte objects, otherwise an exception is raised.\n
 		If no date_dict is passed one is created by calling check_all_dates().
-		
+
 		"""
 		if not date_dict:
 			date_dict = self.check_all_dates()
@@ -254,25 +254,25 @@ class Dates:
 							  of being datetime objects before running function.
 							  Use the check_all_dates() method to perform checks.
 							  """)
-		
-		duplicate_dates = set([date for date in date_list 
+
+		duplicate_dates = set([date for date in date_list
 							   if date_list.count(date) > 1])
 		duplicates_dict = {duplicate : [key for key, value in date_dict.iteritems()
 						   if value == duplicate] for duplicate in duplicate_dates}
 		return duplicates_dict
-		
+
 	def relative_order(self, date_dict = None):
 		"""
 		date_dict	: dict or None
 		return		: dict
 		method		: visible
-		
+
 		Returns a dictionary that shows order of sheets implied by dates in the
 		date_dict and the actual order of the sheets, if different.\n
 		If no date_dict is passed one is created by	calling check_all_dates().\n
 		Resulting order may be perverse if there are duplicate dates in date_dict.
 		"""
-		
+
 		sheets = all_sheets()
 		if not date_dict:
 			date_dict = self.check_all_dates()
@@ -283,7 +283,7 @@ class Dates:
 							  of being datetime objects before running function.
 							  Use the check_all_dates() method to perform checks
 							  """)
-		implied_order = [key for key, value in 
+		implied_order = [key for key, value in
 						 sorted(date_dict.iteritems(), key = lambda x: x[1])]
 		if implied_order == sheets:
 			return {}
@@ -300,13 +300,13 @@ class Dates:
 		date_dict	: dict or None
 		return		: list of tuples
 		method		: visible
-		
+
 		Returns list of tuples where each tuple is a pair of contiguous sheets where
-		the	dates found on those sheets indicate a timedelta greater than 
+		the	dates found on those sheets indicate a timedelta greater than
 		discontinuity_value.\n
 		If no date_dict is passed one is created by calling check_all_dates().
 		"""
-		
+
 		sheets = all_sheets()
 		if not date_dict:
 			date_dict = self.check_all_dates()
@@ -318,12 +318,12 @@ class Dates:
 		date_shift = date_list[:]
 		date_shift.insert(0, date_list[0])
 		date_discontinuities = [x - i for x, i in zip(date_list, date_shift[:-1])]
-		unusual_discontinuities = [index for index, value in 
-								   enumerate(date_discontinuities) 
+		unusual_discontinuities = [index for index, value in
+								   enumerate(date_discontinuities)
 								   if value > datetime.timedelta(discontinuity_value)]
 		return [(sheets[x-1], sheets[x]) for x in unusual_discontinuities]
-		
-		
+
+
 class FindPoints:
 	def __init__(self, col, start_row, end_value, adjustments = None):
 		"""
@@ -331,16 +331,16 @@ class FindPoints:
 		start_row	: int
 		end_value	: string
 		adjustments	: None or int
-		
+
 		Class for finding specific points in  worksheet data. Useful for identifying
-		'headers' as well as end points. The point of interest is identified in a 
+		'headers' as well as end points. The point of interest is identified in a
 		column (col), by searching for the end_value beginning in the start_row, and
 		then making any necessary adjustments as per the adjustments argument.\n
-		
+
 		Initialise class by passing an integer for the column to be searched, an
-		integer indicating the start_row, the end_value to be found, and any 
+		integer indicating the start_row, the end_value to be found, and any
 		necessary adjusments (a positive or negative integer). \n
-		
+
 		Available Methods\n
 		find_point	: get row value of point on active worksheet
 		find_all_points	: get dict of row values of points on all worksheets
@@ -352,21 +352,21 @@ class FindPoints:
 		if not isinstance(end_value, str):
 			raise _InputError("Argument 'end_value' must be an string")
 		if adjustments:
-			if not isinstance(adjustments, int):	
+			if not isinstance(adjustments, int):
 				raise _InputError("Argument 'adjustments' must be an integer or None")
-		
+
 		self.col = col
 		self.end_value = end_value.strip().lower()
 		self.start_row = start_row
 		self.adjustments = adjustments
-		
+
 	def find_point(self):
 		"""
 		return	: int
 		method	: visible
-		
-		Returns row of cell where self.end_value is equal to cell referenced by 
-		self.col and a row value determined by iteration. Return value is adjusted 
+
+		Returns row of cell where self.end_value is equal to cell referenced by
+		self.col and a row value determined by iteration. Return value is adjusted
 		by an amount as specified by self.adjustments. Raises error if end_value not
 		found. \n
 		Assumes end_value in first 200 rows.
@@ -381,13 +381,13 @@ class FindPoints:
 			else:
 				row +=1
 		raise _NotFoundError("Start row not found")
-		
+
 	def find_all_points(self):
 		"""
 		method : visible
-		
-		Returns dict with one key for each sheet in workbook with point row as 
-		value. If no point row is found, the key maps to a string value notifying 
+
+		Returns dict with one key for each sheet in workbook with point row as
+		value. If no point row is found, the key maps to a string value notifying
 		the user of the absence of the point row.
 		"""
 		sheets = all_sheets()
@@ -406,27 +406,27 @@ class sheet_compiler:
 	def __init__(self, filepath):
 		"""
 		filepath : raw string
-		
-		Class for compiling a single worksheet from multiple excel workbooks in a 
+
+		Class for compiling a single worksheet from multiple excel workbooks in a
 		given directory into one new workbook.
-		
+
 		Initialise the class by passing a string of the file directoty path that
-		contains the workbooks from which sheets will be compiled. 
+		contains the workbooks from which sheets will be compiled.
 		"""
 		if not isinstance(filepath, str):
 			raise _InputError("Filepath must be a raw string")
 		self.filepath = filepath
 		os.chdir(filepath)
-		
+
 	def get_file_list(self):
 		"""
 		return 	: list
 		method	: visible
-		
+
 		Returns list of files found in directory self.filepath
 		"""
 		return os.listdir(self.filepath)
-		
+
 	def __get_sheet(self, filename, sub_string1, sub_string2 = None):
 		"""
 		filename 	: string
@@ -434,27 +434,27 @@ class sheet_compiler:
 		sub_string2	: string
 		return		: srting
 		method		: hidden
-		
-		Returns string identifying sheet in workbook identified as containing 
-		sub_string1	and optionally sub_string2 if provided as argument. Raises 
-		exception if the arguments do not uniquely identify a single sheet in the 
+
+		Returns string identifying sheet in workbook identified as containing
+		sub_string1	and optionally sub_string2 if provided as argument. Raises
+		exception if the arguments do not uniquely identify a single sheet in the
 		workbook.
 		"""
 		active_wkbk(filename)
 		sheets = all_sheets()
 		if sub_string2:
-			selected_sheets = [sheet for sheet in sheets if sub_string1.lower() in 
+			selected_sheets = [sheet for sheet in sheets if sub_string1.lower() in
 							   sheet.lower() and sub_string2.lower() in sheet.lower()]
 		else:
-			selected_sheets = [sheet for sheet in sheets if sub_string1.lower() 
+			selected_sheets = [sheet for sheet in sheets if sub_string1.lower()
 						       in sheet.lower()]
-		
+
 		if len(selected_sheets) == 0 or len(selected_sheets) > 1:
 			raise NotFoundError("Error")
-		
+
 		sheet_name = selected_sheets[0]
 		return sheet_name
-		
+
 	def __relocate_sheet(self, filename, to_workbook, sheet_name):
 		"""
 		filename 	: string
@@ -462,13 +462,13 @@ class sheet_compiler:
 		sheet_name	: string
 		return		: None
 		method		: hidden
-		
-		Moves sheet with sheet_name to to_workbook using DN copy_sheet function. 
+
+		Moves sheet with sheet_name to to_workbook using DN copy_sheet function.
 		"""
 		active_wkbk(filename)
 		copy_sheet(to_workbook, sheet_name)
 		return
-	
+
 	def compile_sheets(self, filelist, new_wkbk_name, sub_string1, sub_string2 = None):
 		"""
 		filelist		: list
@@ -476,7 +476,7 @@ class sheet_compiler:
 		sub_string1		: string
 		sub_string2		: string or None
 		return			: formatted string
-		
+
 		Returns formatted string that gives report to user as to success of the
 		compile operation.\n
 		Function opens every file in the self.filepath directory that is contained
@@ -488,7 +488,7 @@ class sheet_compiler:
 		same directory as the files being iterated over. \n
 		Files are opened in the reverse order they are found in the filelist.
 		"""
-		
+
 		unsuccessful = []
 		new_book = new_wkbk()
 		new_file_name = self.filepath + '\\' + new_wkbk_name
@@ -509,29 +509,29 @@ class sheet_compiler:
 		else:
 			message = """
 					  Compile was unable to uniquely identify the sheet to be moved in the following files:
-					  
+
 					  {}
 					  """
-			return message	
+			return message
 #####**************************************************************************#####
 #####									FUNCTIONS  						       #####
-#####**************************************************************************#####			
+#####**************************************************************************#####
 def rename_sheets(prefix):
 	"""
 	suffix : string
 	return : None
-	
+
 	Renames sheets according to suffix + two digit serial
 	"""
 	sheets = all_sheets()
-	codeList = list(itertools.chain(*[[prefix + '0' + str(x) for x in xrange(1, 10)], 
+	codeList = list(itertools.chain(*[[prefix + '0' + str(x) for x in xrange(1, 10)],
 									  [prefix + str(x) for x in xrange(10, 100)]]))
 	for x in xrange(len(sheets)):
 		active_sheet(sheets[x])
 		rename_sheet(sheets[x], codeList[x])
-	return		
-				
-	
-	
-		
-		
+	return
+
+
+
+
+
