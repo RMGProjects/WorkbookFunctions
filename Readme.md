@@ -317,19 +317,19 @@ As above, the syntax allows the user to pass a 'homemade' date_dict, the date di
 
 ```python
 dates_dict = dates.check_all_dates()
-duplicates_dict = dates.relative_order(dates_dict)
+relative_dict = dates.relative_order(dates_dict)
 ```
 
 or
 
 ```python
-duplicates_dict = dates.relative_order()
+relative_dict = dates.relative_order()
 ```
 
 or
 
 ```python
-duplicates_dict = dates.duplicates(homemade_date_dict)
+relative_dict = dates.relative_order(homemade_date_dict)
 ```
 
 > The output dictionary should at least be looked at by the user. 
@@ -341,7 +341,7 @@ If changes to the sheet order are made it is useful to then use the `wf.rename_s
 ####Checking the Date Discontinuities<br/>
 In theory we should have six workbooks per week from which sheets have been extracted and compiled. Therefore if there are any discontinuities in the dates greater than one day, then it is possible that some files were missing from the folder from which sheets were compiled, or data might otherwise be missing. In order to check whether there are such discontinuities use the `discontinuities()` method. The syntax for this method is as follows:
 
-`wf.Dates.relative_order(discontinuity_value[,date_dict])`
+`wf.Dates.discontinuities(discontinuity_value[,date_dict])`
 
 |     |     |
 | --- | --- |
@@ -356,19 +356,19 @@ As above, the syntax allows the user to pass a 'homemade' date_dict, the date di
 
 ```python
 dates_dict = dates.check_all_dates()
-duplicates_dict = dates.discontinuities(2, dates_dict)
+dicontinuity_dict = dates.discontinuities(2, dates_dict)
 ```
 
 or
 
 ```python
-duplicates_dict = dates.discontinuities(2)
+dicontinuity_dict = dates.discontinuities(2)
 ```
 
 or
 
 ```python
-duplicates_dict = dates.discontinuities(2, homemade_date_dict)
+dicontinuity_dict = dates.discontinuities(2, homemade_date_dict)
 ```
 
 > The resulting list should be examined, and any causes of missing data sheets discussed with the project management. 
