@@ -528,16 +528,13 @@ class sheet_compiler:
 			message = "Compile successful for all files in filelist"
 			return message
 		else:
-<<<<<<< HEAD
-			return unsuccessful
-=======
 			message = """
 					  Compile was unable to uniquely identify the sheet to be moved in the following files:
 
 					  {}
 					  """
 			return message
->>>>>>> f884ae7a21e0c8d80cc87c5f2718115595332fa8
+
 #####**************************************************************************#####
 #####									FUNCTIONS  						       #####
 #####**************************************************************************#####
