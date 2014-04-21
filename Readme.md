@@ -259,6 +259,18 @@ dates_dict = dates.check_all_dates()
 The point of the WorkbookFunctions module is not to deal with every possible alternative, but rather to show the user where the assumed standard format is not applicable. If on certain sheets the standard format is not applicable, changes must be made, either manually, or by using general DataNitro data manipulation techniques in order to ensure that the format is the same on every sheet, and therefore the methods can run as intended on every sheet in the Workbook. Therefore, once the dictionary is created and errors identified, changes should be made to the worksheets themselves and the method re-called until such time as a `datetime.date` is available for every worksheet. The techniques used to ensure the formatting is standard will differ according to the workbook being worked with. See the Troubleshooing file for some tips. Every time a data technician encounters an issue this should be logged along with the solution such that the group can learn from techniques developed. 
 
 
+####Getting All Date Cell Types in Workbook<br/>
+If the date dictionary has many date values that are no found using the above, it can be useful to do a quick check of the types of value found at the date cell on each sheet. To do this use the `get_types()` method. The syntax for calling this method is as follows:
+
+`wf.Dates.get_types()`
+
+An example call might look as follows:
+
+```python
+dates__type_dict = dates.get_types()
+```
+
+
 ####Checking for Duplicate Dates<br/>
 Sometimes the persons providing this data forget to change the date on the worksheets, and this can lead to duplicate dates. In order to identify duplicate dates in the Workbook use the `duplicates()` method. The syntax for this method is as follows:
 

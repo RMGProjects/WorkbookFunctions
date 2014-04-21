@@ -168,6 +168,20 @@ class Dates:
 			return Cell(self.date_cell_ref).value
 		else:
 			return str(Cell(self.date_cell_ref).value)
+			
+	def get_types(self):
+		"""
+		return	: dict
+		method	: visible
+		
+		Returns dict of sheet names and type of value found at self.date_cell_ref
+		"""
+		sheets = all_sheets()
+		type_dict = {sheet : object() for sheet in sheets}
+		for sheet in sheets:
+			active_sheet(sheet)
+			type_dict[sheet] = type(Cell(self.date_cell_ref).value)
+		return type_dict
 
 	def cell_to_date(self):
 		"""
@@ -450,13 +464,7 @@ class sheet_compiler:
 						       in sheet.lower()]
 
 		if len(selected_sheets) == 0 or len(selected_sheets) > 1:
-<<<<<<< HEAD
 			raise _NotFoundError("Error")
-		
-=======
-			raise NotFoundError("Error")
-
->>>>>>> f884ae7a21e0c8d80cc87c5f2718115595332fa8
 		sheet_name = selected_sheets[0]
 		return sheet_name
 
@@ -537,18 +545,12 @@ def rename_sheets(prefix):
 	"""
 	suffix : string
 	return : None
-<<<<<<< HEAD
 	
 	Renames sheets according to prefix + two digit serial
-=======
-
-	Renames sheets according to suffix + two digit serial
->>>>>>> f884ae7a21e0c8d80cc87c5f2718115595332fa8
 	"""
 	sheets = all_sheets()
-	codeList = list(itertools.chain(*[[prefix + '0' + str(x) for x in xrange(1, 10)],
+	codeList = list(itertools.chain(*[[prefix + '0' + str(x) for x in xrange(1, 10)], 
 									  [prefix + str(x) for x in xrange(10, 100)]]))
-<<<<<<< HEAD
 	try:
 		for x in xrange(len(sheets)):
 			active_sheet(sheets[x])
@@ -563,19 +565,4 @@ def rename_sheets(prefix):
 			active_sheet(sheets[x])
 			rename_sheet(sheets[x], codeList[x])
 	return		
-				
-	
-	
-		
-		
-=======
-	for x in xrange(len(sheets)):
-		active_sheet(sheets[x])
-		rename_sheet(sheets[x], codeList[x])
-	return
 
-
-
-
-
->>>>>>> f884ae7a21e0c8d80cc87c5f2718115595332fa8
