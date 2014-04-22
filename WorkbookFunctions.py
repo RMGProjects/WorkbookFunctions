@@ -415,32 +415,41 @@ class FindPoints:
 				found_dict[sheet] = 'Point Not Found'
 		return found_dict
 
+		
 class sheet_compiler:
-
-	def __init__(self, filepath):
+	def __init__(self, top_folderpath, **kwargs):
+		if not isinstance(top_folderpath, str):
+			raise _InputError("top_folderpath must be a raw string")
+		self.top_folderpath = top_folderpath
+		if len(kwargs) < 1:
+			raise _InputError('Specify at least one kwarg')
+		self.file_dict = kwargs
+		print self.file_dict.keys()
 		"""
-		filepath : raw string
+		top_filepath	: raw string
+		**kwargs		: e.g. folder1 = path/to/file1 	
 
-		Class for compiling a single worksheet from multiple excel workbooks in a
-		given directory into one new workbook.
+		Class for compiling a single worksheet from multiple excel workbooks in one
+		or more folder of excel workbooks to a single workbook. 
 
-		Initialise the class by passing a string of the file directoty path that
-		contains the workbooks from which sheets will be compiled.
+		Initialise the class by passing a string of the top_folderpath where the
+		compiled workbook will be stored, and a number of arguments of the format
+		folder1 = r'Path/To/Folder
 		"""
-		if not isinstance(filepath, str):
-			raise _InputError("Filepath must be a raw string")
-		self.filepath = filepath
-		os.chdir(filepath)
-
-	def get_file_list(self):
+		
+	def get_file_dict(self):
 		"""
-		return 	: list
+		return 	: dict
 		method	: visible
-
-		Returns list of files found in directory self.filepath
+		
+		Returns a dict of folder names passed during compiler constructions and 
+		values that are lists of the files found in the associated folders
 		"""
-		return os.listdir(self.filepath)
-
+		
+		file_dict = {key : list(os.listdir(self.file_dict[key])) 
+					 for key in self.file_dict.keys()}
+		return file_dict
+		
 	def __get_sheet(self, filename, sub_string1, sub_string2 = None):
 		"""
 		filename 	: string
@@ -481,10 +490,10 @@ class sheet_compiler:
 		active_wkbk(filename)
 		copy_sheet(to_workbook, sheet_name)
 		return
-
-	def compile_sheets(self, filelist, new_wkbk_name, sub_string1, sub_string2 = None):
+		
+	def compile_sheets(self, file_list_dict, new_wkbk_name, sub_string1, sub_string2 = None):
 		"""
-		filelist		: list
+		file_dict		: list
 		new_wkbk_name	: string
 		sub_string1		: string
 		sub_string2		: string or None
@@ -492,38 +501,49 @@ class sheet_compiler:
 
 		Returns formatted string that gives report to user as to success of the
 		compile operation.\n
-		Function opens every file in the self.filepath directory that is contained
-		in the filelist passed as argument. Up to two substrings may be passed as
-		arguments, and the combination of these substrings should uniquely identify
+		Function opens every file in the list of files that are the keys of the 
+		file_dict passed as argument. Up to two sub-strings may be passed as
+		arguments, and the combination of these sub-strings should uniquely identify
 		the worksheet to be moved (as there may be more than one).\n
 		Sheets that are successfully identified for copying will be copied to a new
 		workbook created according to new_wkbk_name. This workbook will be in the
-		same directory as the files being iterated over. \n
-		Files are opened in the reverse order they are found in the filelist.
+		top_folderpath directory. \n
+		Files are opened in the reverse order they are found in the file_dict.
 		"""
 
 		unsuccessful = []
 		new_book = new_wkbk()
-		new_file_name = self.filepath + '\\' + new_wkbk_name
+		new_file_name = self.top_folderpath + '\\' + new_wkbk_name
 		save(new_file_name)
-		filelist.reverse()
-		for filename in filelist:
-			open_wkbk(filename)
-			try:
-				sheet_name = self.__get_sheet(filename, sub_string1, sub_string2)
+		folders = file_list_dict.keys()
+		folders.sort()
+		folders.reverse()
+		
+		for folder in folders:
+			os.chdir(self.file_dict[folder])
+			print folder 
+			filelist = file_list_dict[folder]
+			filelist.reverse()
+			print filelist
+			for filename in filelist:
+				print filename
+				open_wkbk(filename)
 				try:
-					self.__relocate_sheet(filename, new_wkbk_name, sheet_name)
-				except NitroException:
-					new_name = sheet_name + str(random.randint(1, 10000000))
-					rename_sheet(sheet_name, new_name)
+					sheet_name = self.__get_sheet(filename, sub_string1, sub_string2)
 					try:
-						self.__relocate_sheet(filename, new_wkbk_name, new_name)
+						self.__relocate_sheet(filename, new_wkbk_name, sheet_name)
 					except NitroException:
-						unsuccessful.append(filename)		
-			except _NotFoundError:
-				unsuccessful.append(filename)
-			close_wkbk(filename)
-		active_wkbk(new_wkbk_name)
+						new_name = sheet_name + str(random.randint(1, 10000000))
+						rename_sheet(sheet_name, new_name)
+						try:
+							self.__relocate_sheet(filename, new_wkbk_name, new_name)
+						except NitroException:
+							unsuccessful.append(filename)		
+				except _NotFoundError:
+					unsuccessful.append(filename)
+				close_wkbk(filename)
+			active_wkbk(new_wkbk_name)
+		
 		if not unsuccessful:
 			message = "Compile successful for all files in filelist"
 			return message
@@ -534,6 +554,127 @@ class sheet_compiler:
 					  {}
 					  """
 			return message
+			
+
+# class sheet_compiler:
+
+	# def __init__(self, filepath):
+		# """
+		# filepath : raw string
+
+		# Class for compiling a single worksheet from multiple excel workbooks in a
+		# given directory into one new workbook.
+
+		# Initialise the class by passing a string of the file directoty path that
+		# contains the workbooks from which sheets will be compiled.
+		# """
+		# if not isinstance(filepath, str):
+			# raise _InputError("Filepath must be a raw string")
+		# self.filepath = filepath
+		# os.chdir(self.filepath)
+
+	# def get_file_list(self):
+		# """
+		# return 	: list
+		# method	: visible
+
+		# Returns list of files found in directory self.filepath
+		# """
+		# return os.listdir(self.filepath)
+
+	# def __get_sheet(self, filename, sub_string1, sub_string2 = None):
+		# """
+		# filename 	: string
+		# sub_string1	: string
+		# sub_string2	: string
+		# return		: srting
+		# method		: hidden
+
+		# Returns string identifying sheet in workbook identified as containing
+		# sub_string1	and optionally sub_string2 if provided as argument. Raises
+		# exception if the arguments do not uniquely identify a single sheet in the
+		# workbook.
+		# """
+		# active_wkbk(filename)
+		# sheets = all_sheets()
+		# if sub_string2:
+			# selected_sheets = [sheet for sheet in sheets if sub_string1.lower() in
+							   # sheet.lower() and sub_string2.lower() in sheet.lower()]
+		# else:
+			# selected_sheets = [sheet for sheet in sheets if sub_string1.lower()
+						       # in sheet.lower()]
+
+		# if len(selected_sheets) == 0 or len(selected_sheets) > 1:
+			# raise _NotFoundError("Error")
+		# sheet_name = selected_sheets[0]
+		# return sheet_name
+
+	# def __relocate_sheet(self, filename, to_workbook, sheet_name):
+		# """
+		# filename 	: string
+		# to_workbook	: string
+		# sheet_name	: string
+		# return		: None
+		# method		: hidden
+
+		# Moves sheet with sheet_name to to_workbook using DN copy_sheet function.
+		# """
+		# active_wkbk(filename)
+		# copy_sheet(to_workbook, sheet_name)
+		# return
+
+	# def compile_sheets(self, filelist, new_wkbk_name, sub_string1, sub_string2 = None):
+		# """
+		# filelist		: list
+		# new_wkbk_name	: string
+		# sub_string1		: string
+		# sub_string2		: string or None
+		# return			: formatted string
+
+		# Returns formatted string that gives report to user as to success of the
+		# compile operation.\n
+		# Function opens every file in the self.filepath directory that is contained
+		# in the filelist passed as argument. Up to two substrings may be passed as
+		# arguments, and the combination of these substrings should uniquely identify
+		# the worksheet to be moved (as there may be more than one).\n
+		# Sheets that are successfully identified for copying will be copied to a new
+		# workbook created according to new_wkbk_name. This workbook will be in the
+		# same directory as the files being iterated over. \n
+		# Files are opened in the reverse order they are found in the filelist.
+		# """
+
+		# unsuccessful = []
+		# new_book = new_wkbk()
+		# new_file_name = self.filepath + '\\' + new_wkbk_name
+		# save(new_file_name)
+		# filelist.reverse()
+		# for filename in filelist:
+			# open_wkbk(filename)
+			# try:
+				# sheet_name = self.__get_sheet(filename, sub_string1, sub_string2)
+				# try:
+					# self.__relocate_sheet(filename, new_wkbk_name, sheet_name)
+				# except NitroException:
+					# new_name = sheet_name + str(random.randint(1, 10000000))
+					# rename_sheet(sheet_name, new_name)
+					# try:
+						# self.__relocate_sheet(filename, new_wkbk_name, new_name)
+					# except NitroException:
+						# unsuccessful.append(filename)		
+			# except _NotFoundError:
+				# unsuccessful.append(filename)
+			# close_wkbk(filename)
+		# active_wkbk(new_wkbk_name)
+		# if not unsuccessful:
+			# message = "Compile successful for all files in filelist"
+			# return message
+		# else:
+			# message = """
+					  # Compile was unable to uniquely identify the sheet to be moved in the following files:
+
+					  # {}
+					  # """
+			# return message
 
 #####**************************************************************************#####
 #####									FUNCTIONS  						       #####
