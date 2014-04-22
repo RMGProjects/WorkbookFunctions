@@ -1,12 +1,4 @@
-#####**************************************************************************#####
-#####								DESCRIPTION	    						   #####
-#####**************************************************************************#####
-
-
-#####**************************************************************************#####
-#####									CLASSES   						       #####
-#####**************************************************************************#####
-import datetime, itertools, os, random
+import datetime, itertools, os, random, re
 
 class _InputError(Exception):
 	def __init__(self, value):
@@ -337,6 +329,72 @@ class Dates:
 								   if value > datetime.timedelta(discontinuity_value)]
 		return [(sheets[x-1], sheets[x]) for x in unusual_discontinuities]
 
+		
+	def compare_cell_file_date(file_list_dict, date_dict, regex, strp_format = None):
+		"""
+		file_list_dict 	: dict (as created when compiling)
+		date_dict 		: dict
+		regex			: str
+		strp_format		: None or string
+		return			: dict
+		method			: visible
+		
+		Returns a dictionary where keys are sheet names and values are tuples where
+		first element of the tuple is the date as per the file name taken from 
+		file_list_dict, and the second is the date as per date cell taken from the
+		date_dict. There is only an entry in the disctionary if the two dates in the
+		tuple are not equal.\n
+		The user must supply a regular expression (regex) argument that will 
+		identify the date component of the file names in the file_list_dict. The 
+		user may optionally provide a strp_format argument that is passed to 
+		datetime.strptime() in order to convert the date found in the file name to 
+		a datetime.date() object. In most cases this will not be necessary as the
+		non-numeric characters of the date string are stripped and then converted
+		using either "%d%m%Y" or "%d%m%y" which will cover most cases.\n
+		The user is notified in the dictionary if any conversions are impossible, or
+		the regular expression does not identify a date like string in the filelists.
+		"""
+		sheets = all_sheets()
+		folders = file_list_dict.keys()
+		folders.sort()
+		re_compiler = re.compile(regex)
+		count = 0
+		No_file_match = []
+		Bad_date_conversion = []
+		Mismatches = {}
+		
+		for folder in folders:
+			for file in file_list_dict[folder]:
+				result = re_compiler.search(file)
+				if not result:
+					No_match.append(file)
+					count +=1
+					continue
+				else:
+					date_group = result.group()
+					date_value = ''.join(re.findall(r'\d+', date_group))
+					if strp_format:
+						try:
+							d_date = datetime.datetime.strptime(date_value, strp_format).date()
+						except ValueError:
+							Bad_date_conversion.append(file)
+							continue
+					else:
+						try: 
+							d_date = datetime.datetime.strptime(date_value, "%d%m%Y").date()
+						except ValueError:
+							try:
+								d_date = datetime.datetime.strptime(date_value, "%d%m%y").date()
+							except ValueError:
+								Bad_date_conversion.append(file)
+								continue
+					if date_dict[sheets[count]] != d_date:
+						Mismatches[sheets[count]] = (date_group, date_dict[sheets[0]])
+				count+=1
+		Mismatches.update({"No date match in file:" : No_file_match, 
+						   "Date conversions not possible" : Bad_date_conversion })
+		return Mismatches
+			
 
 class FindPoints:
 	def __init__(self, col, start_row, end_value, adjustments = None):
@@ -676,9 +734,7 @@ class sheet_compiler:
 					  # """
 			# return message
 
-#####**************************************************************************#####
-#####									FUNCTIONS  						       #####
-#####**************************************************************************#####
+
 def rename_sheets(prefix):
 	"""
 	suffix : string
