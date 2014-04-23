@@ -1,4 +1,4 @@
-import datetime, itertools, os, random, re
+import datetime, itertools, os, random, re, json
 
 class _InputError(Exception):
 	def __init__(self, value):
@@ -342,8 +342,12 @@ class Dates:
 		Returns a dictionary where keys are sheet names and values are tuples where
 		first element of the tuple is the date as per the file name taken from 
 		file_list_dict, and the second is the date as per date cell taken from the
-		date_dict. There is only an entry in the disctionary if the two dates in the
+		date_dict. There is only an entry in the dictionary if the two dates in the
 		tuple are not equal.\n
+		The file list dict should be that which was created when compiling the 
+		sheets. If that object is still in the computer memory, then pass it 
+		directly, otherwise open the 'file_list_dict.json' that was created when 
+		the sheets were originally compiled.\n
 		The user must supply a regular expression (regex) argument that will 
 		identify the date component of the file names in the file_list_dict. The 
 		user may optionally provide a strp_format argument that is passed to 
@@ -353,6 +357,9 @@ class Dates:
 		using either "%d%m%Y" or "%d%m%y" which will cover most cases.\n
 		The user is notified in the dictionary if any conversions are impossible, or
 		the regular expression does not identify a date like string in the filelists.
+		
+		Assumes that the sheets are in same order as file list i.e. no changes have
+		been made. 
 		"""
 		sheets = all_sheets()
 		folders = file_list_dict.keys()
@@ -389,7 +396,7 @@ class Dates:
 								Bad_date_conversion.append(file)
 								continue
 					if date_dict[sheets[count]] != d_date:
-						Mismatches[sheets[count]] = (date_group, date_dict[sheets[0]])
+						Mismatches[sheets[count]] = (date_group, date_dict[sheets[count]])
 				count+=1
 		Mismatches.update({"No date match in file:" : No_file_match, 
 						   "Date conversions not possible" : Bad_date_conversion })
@@ -476,15 +483,8 @@ class FindPoints:
 		
 class sheet_compiler:
 	def __init__(self, top_folderpath, **kwargs):
-		if not isinstance(top_folderpath, str):
-			raise _InputError("top_folderpath must be a raw string")
-		self.top_folderpath = top_folderpath
-		if len(kwargs) < 1:
-			raise _InputError('Specify at least one kwarg')
-		self.file_dict = kwargs
-		print self.file_dict.keys()
 		"""
-		top_filepath	: raw string
+		top_folderpath	: raw string
 		**kwargs		: e.g. folder1 = path/to/file1 	
 
 		Class for compiling a single worksheet from multiple excel workbooks in one
@@ -494,6 +494,13 @@ class sheet_compiler:
 		compiled workbook will be stored, and a number of arguments of the format
 		folder1 = r'Path/To/Folder
 		"""
+		if not isinstance(top_folderpath, str):
+			raise _InputError("top_folderpath must be a raw string")
+		self.top_folderpath = top_folderpath
+		if len(kwargs) < 1:
+			raise _InputError('Specify at least one kwarg')
+		self.file_dict = kwargs
+		print self.file_dict.keys()
 		
 	def get_file_dict(self):
 		"""
@@ -504,9 +511,9 @@ class sheet_compiler:
 		values that are lists of the files found in the associated folders
 		"""
 		
-		file_dict = {key : list(os.listdir(self.file_dict[key])) 
-					 for key in self.file_dict.keys()}
-		return file_dict
+		file_list_dict = {key : list(os.listdir(self.file_dict[key])) 
+						  for key in self.file_dict.keys()}
+		return file_list_dict
 		
 	def __get_sheet(self, filename, sub_string1, sub_string2 = None):
 		"""
@@ -548,6 +555,23 @@ class sheet_compiler:
 		active_wkbk(filename)
 		copy_sheet(to_workbook, sheet_name)
 		return
+
+		def __save_to_json(self, file_list_dict):
+		"""
+		file_list_dict	: dict
+		filename		: string (including .json extension
+		returns			: none
+		method:			hidden
+		
+		Function saves object passed as file_list_dict to json in self.top_folderpath.
+		Could be any object in fact, but designed to save the file_list_dict such
+		as that created by the get_file_dict() method.\n
+		Function to be called in compile_sheets() method below
+		"""
+		os.chdir(self.top_folderpath)
+		with open('final_file_list_dict_' + str(datetime.datetime.now().date()) + '.json', 'w') as out_file:
+			json.dump(file_list_dict, out_file)
+		return
 		
 	def compile_sheets(self, file_list_dict, new_wkbk_name, sub_string1, sub_string2 = None):
 		"""
@@ -568,7 +592,8 @@ class sheet_compiler:
 		top_folderpath directory. \n
 		Files are opened in the reverse order they are found in the file_dict.
 		"""
-
+		
+		self.__save_to_json(file_list_dict) #Note __save to json call
 		unsuccessful = []
 		new_book = new_wkbk()
 		new_file_name = self.top_folderpath + '\\' + new_wkbk_name
@@ -613,127 +638,35 @@ class sheet_compiler:
 					  """
 			return message
 			
-
-# class sheet_compiler:
-
-	# def __init__(self, filepath):
-		# """
-		# filepath : raw string
-
-		# Class for compiling a single worksheet from multiple excel workbooks in a
-		# given directory into one new workbook.
-
-		# Initialise the class by passing a string of the file directoty path that
-		# contains the workbooks from which sheets will be compiled.
-		# """
-		# if not isinstance(filepath, str):
-			# raise _InputError("Filepath must be a raw string")
-		# self.filepath = filepath
-		# os.chdir(self.filepath)
-
-	# def get_file_list(self):
-		# """
-		# return 	: list
-		# method	: visible
-
-		# Returns list of files found in directory self.filepath
-		# """
-		# return os.listdir(self.filepath)
-
-	# def __get_sheet(self, filename, sub_string1, sub_string2 = None):
-		# """
-		# filename 	: string
-		# sub_string1	: string
-		# sub_string2	: string
-		# return		: srting
-		# method		: hidden
-
-		# Returns string identifying sheet in workbook identified as containing
-		# sub_string1	and optionally sub_string2 if provided as argument. Raises
-		# exception if the arguments do not uniquely identify a single sheet in the
-		# workbook.
-		# """
-		# active_wkbk(filename)
-		# sheets = all_sheets()
-		# if sub_string2:
-			# selected_sheets = [sheet for sheet in sheets if sub_string1.lower() in
-							   # sheet.lower() and sub_string2.lower() in sheet.lower()]
-		# else:
-			# selected_sheets = [sheet for sheet in sheets if sub_string1.lower()
-						       # in sheet.lower()]
-
-		# if len(selected_sheets) == 0 or len(selected_sheets) > 1:
-			# raise _NotFoundError("Error")
-		# sheet_name = selected_sheets[0]
-		# return sheet_name
-
-	# def __relocate_sheet(self, filename, to_workbook, sheet_name):
-		# """
-		# filename 	: string
-		# to_workbook	: string
-		# sheet_name	: string
-		# return		: None
-		# method		: hidden
-
-		# Moves sheet with sheet_name to to_workbook using DN copy_sheet function.
-		# """
-		# active_wkbk(filename)
-		# copy_sheet(to_workbook, sheet_name)
-		# return
-
-	# def compile_sheets(self, filelist, new_wkbk_name, sub_string1, sub_string2 = None):
-		# """
-		# filelist		: list
-		# new_wkbk_name	: string
-		# sub_string1		: string
-		# sub_string2		: string or None
-		# return			: formatted string
-
-		# Returns formatted string that gives report to user as to success of the
-		# compile operation.\n
-		# Function opens every file in the self.filepath directory that is contained
-		# in the filelist passed as argument. Up to two substrings may be passed as
-		# arguments, and the combination of these substrings should uniquely identify
-		# the worksheet to be moved (as there may be more than one).\n
-		# Sheets that are successfully identified for copying will be copied to a new
-		# workbook created according to new_wkbk_name. This workbook will be in the
-		# same directory as the files being iterated over. \n
-		# Files are opened in the reverse order they are found in the filelist.
-		# """
-
-		# unsuccessful = []
-		# new_book = new_wkbk()
-		# new_file_name = self.filepath + '\\' + new_wkbk_name
-		# save(new_file_name)
-		# filelist.reverse()
-		# for filename in filelist:
-			# open_wkbk(filename)
-			# try:
-				# sheet_name = self.__get_sheet(filename, sub_string1, sub_string2)
-				# try:
-					# self.__relocate_sheet(filename, new_wkbk_name, sheet_name)
-				# except NitroException:
-					# new_name = sheet_name + str(random.randint(1, 10000000))
-					# rename_sheet(sheet_name, new_name)
-					# try:
-						# self.__relocate_sheet(filename, new_wkbk_name, new_name)
-					# except NitroException:
-						# unsuccessful.append(filename)		
-			# except _NotFoundError:
-				# unsuccessful.append(filename)
-			# close_wkbk(filename)
-		# active_wkbk(new_wkbk_name)
-		# if not unsuccessful:
-			# message = "Compile successful for all files in filelist"
-			# return message
-		# else:
-			# message = """
-					  # Compile was unable to uniquely identify the sheet to be moved in the following files:
-
-					  # {}
-					  # """
-			# return message
-
+class workbook_structure:
+	def __init__(self, date_dict, start_row_dict, end_row_dict, cols_list):
+		self.__date_list = [value for key, value in date_dict.iteritems()]
+		self.__start_list = [value for key, value in start_row_dict.iteritems()]
+		self.__end_list = [value for key, value in start_row_dict.iteritems()]
+		self.__cols = cols_list
+		if not all(isinstance(date, datetime.date) for date in self.__date_list):
+			raise _InputError("All values in date_dict must be datetime.date objects")
+		if not all(isinstance(row, int) for row in self.__start_list):
+			raise _InputError("All values in start_row_dict must be integer objects")	
+		if not all(isinstance(row, int) for row in self.__end_list):
+			raise _InputError("All values in end_row_dict must be integer objects")	
+		if not all(isinstance(col, int) for col in self.__cols):
+			raise _InputError("All values in cols_list must be integer objects")
+		self.workbook_structure = {}
+		self.workbook_structure['dates'] = {key : str(date) for key, date in 
+											date_dict.iteritems()}
+		self.workbook_structure['start_rows'] = {key : row - 1 for key, row in 
+												 start_row_dict.iteritems()}
+		self.workbook_structure['cols'] = self.__cols
+	
+	def save_structure(self, top_folderpath):
+		if not isinstance(top_folderpath, str):
+			raise _InputError("top_folderpath must be a string value")
+		os.chdir(top_folderpath)
+		with open('workbook_structure_' + str(datetime.datetime.now().date()) + '.json', 'w') as out_file:
+			json.dump(self.workbook_structure, out_file)
+		return "Save complete"
+		
 
 def rename_sheets(prefix):
 	"""
