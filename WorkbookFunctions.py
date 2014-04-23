@@ -238,21 +238,17 @@ class Dates:
 			self.__update_date_dict(date_object, date_dict)
 		return date_dict
 
-	def find_duplicates(self, date_dict = None):
+	def find_duplicates(self):
 		"""
-		date_dict : dict or None
 		return	: dict
 		method	: visible
 
 		Returns a dictionary where dates that are found more than once in the values
-		of date_dict are the keys, and the values are the keys of date_dict at which
-		the duplicate dates are found. Only accepts a date_dict whose values are all
-		datetime.dateimte objects, otherwise an exception is raised.\n
-		If no date_dict is passed one is created by calling check_all_dates().
+		of date_dict created upon the call are the keys, and the values are the 
+		keys of date_dict at which the duplicate dates are found.\n
 
 		"""
-		if not date_dict:
-			date_dict = self.check_all_dates()
+		date_dict = self.check_all_dates()
 		date_list = [value for key, value in date_dict.iteritems()]
 		if not all(isinstance(date, datetime.date) for date in date_list):
 			raise _InputError("""
@@ -267,21 +263,20 @@ class Dates:
 						   if value == duplicate] for duplicate in duplicate_dates}
 		return duplicates_dict
 
-	def relative_order(self, date_dict = None):
+	def relative_order(self):
 		"""
-		date_dict	: dict or None
 		return		: dict
 		method		: visible
 
 		Returns a dictionary that shows order of sheets implied by dates in the
-		date_dict and the actual order of the sheets, if different.\n
+		date_dict created upon the call and the actual order of the sheets, if 
+		different.\n
 		If no date_dict is passed one is created by	calling check_all_dates().\n
 		Resulting order may be perverse if there are duplicate dates in date_dict.
 		"""
 
 		sheets = all_sheets()
-		if not date_dict:
-			date_dict = self.check_all_dates()
+		date_dict = self.check_all_dates()
 		date_list = [value for key, value in date_dict.iteritems()]
 		if not all(isinstance(date, datetime.date) for date in date_list):
 			raise _InputError("""
@@ -300,7 +295,7 @@ class Dates:
 								  }
 			return relative_order_dict
 
-	def discontinuities(self, discontinuity_value, date_dict = None):
+	def discontinuities(self, discontinuity_value):
 		"""
 		discontinuity_value : int
 		date_dict	: dict or None
@@ -310,12 +305,11 @@ class Dates:
 		Returns list of tuples where each tuple is a pair of contiguous sheets where
 		the	dates found on those sheets indicate a timedelta greater than
 		discontinuity_value.\n
-		If no date_dict is passed one is created by calling check_all_dates().
+		A date_dict is created by calling check_all_dates().
 		"""
 
 		sheets = all_sheets()
-		if not date_dict:
-			date_dict = self.check_all_dates()
+		date_dict = self.check_all_dates()
 		date_list = [value for key, value in sorted(date_dict.iteritems())]
 		if not all(isinstance(date, datetime.date) for date in date_list):
 			raise _InputError("""All date_cell_ref values in all sheets must be capable
@@ -330,10 +324,9 @@ class Dates:
 		return [(sheets[x-1], sheets[x]) for x in unusual_discontinuities]
 
 		
-	def compare_cell_file_date(file_list_dict, date_dict, regex, strp_format = None):
+	def compare_cell_file_date(self, file_list_dict, regex, strp_format = None):
 		"""
 		file_list_dict 	: dict (as created when compiling)
-		date_dict 		: dict
 		regex			: str
 		strp_format		: None or string
 		return			: dict
@@ -341,9 +334,10 @@ class Dates:
 		
 		Returns a dictionary where keys are sheet names and values are tuples where
 		first element of the tuple is the date as per the file name taken from 
-		file_list_dict, and the second is the date as per date cell taken from the
-		date_dict. There is only an entry in the dictionary if the two dates in the
-		tuple are not equal.\n
+		file_list_dict, and the second is the date as per date cell taken from a
+		date_dict that is created upon the call.\n
+		There is only an entry in the dictionary if the two dates in the tuple are 
+		not equal.\n
 		The file list dict should be that which was created when compiling the 
 		sheets. If that object is still in the computer memory, then pass it 
 		directly, otherwise open the 'file_list_dict.json' that was created when 
@@ -361,6 +355,7 @@ class Dates:
 		Assumes that the sheets are in same order as file list i.e. no changes have
 		been made. 
 		"""
+		date_dict = self.check_all_dates()
 		sheets = all_sheets()
 		folders = file_list_dict.keys()
 		folders.sort()
@@ -498,9 +493,8 @@ class sheet_compiler:
 			raise _InputError("top_folderpath must be a raw string")
 		self.top_folderpath = top_folderpath
 		if len(kwargs) < 1:
-			raise _InputError('Specify at least one kwarg')
+			raise _InputError('Specify at least one kwarg (folder path)')
 		self.file_dict = kwargs
-		print self.file_dict.keys()
 		
 	def get_file_dict(self):
 		"""
@@ -556,7 +550,7 @@ class sheet_compiler:
 		copy_sheet(to_workbook, sheet_name)
 		return
 
-		def __save_to_json(self, file_list_dict):
+	def __save_to_json(self, file_list_dict):
 		"""
 		file_list_dict	: dict
 		filename		: string (including .json extension
@@ -604,12 +598,9 @@ class sheet_compiler:
 		
 		for folder in folders:
 			os.chdir(self.file_dict[folder])
-			print folder 
-			filelist = file_list_dict[folder]
+			filelist = file_list_dict[folder][:]
 			filelist.reverse()
-			print filelist
 			for filename in filelist:
-				print filename
 				open_wkbk(filename)
 				try:
 					sheet_name = self.__get_sheet(filename, sub_string1, sub_string2)
@@ -639,13 +630,14 @@ class sheet_compiler:
 			return message
 			
 class workbook_structure:
-	def __init__(self, date_dict, start_row_dict, end_row_dict, cols_list):
-		self.__date_list = [value for key, value in date_dict.iteritems()]
+	def __init__(self, Dates_class_object, start_row_dict, end_row_dict, cols_list):
+		self.__date_dict = Dates_class_object.check_all_dates()
+		self.__date_list = [value for key, value in self.__date_dict.iteritems()]
 		self.__start_list = [value for key, value in start_row_dict.iteritems()]
 		self.__end_list = [value for key, value in start_row_dict.iteritems()]
 		self.__cols = cols_list
 		if not all(isinstance(date, datetime.date) for date in self.__date_list):
-			raise _InputError("All values in date_dict must be datetime.date objects")
+			raise _InputError("All dates values in workbook must be datetime.date objects")
 		if not all(isinstance(row, int) for row in self.__start_list):
 			raise _InputError("All values in start_row_dict must be integer objects")	
 		if not all(isinstance(row, int) for row in self.__end_list):
@@ -654,7 +646,7 @@ class workbook_structure:
 			raise _InputError("All values in cols_list must be integer objects")
 		self.workbook_structure = {}
 		self.workbook_structure['dates'] = {key : str(date) for key, date in 
-											date_dict.iteritems()}
+											self.__date_dict.iteritems()}
 		self.workbook_structure['start_rows'] = {key : row - 1 for key, row in 
 												 start_row_dict.iteritems()}
 		self.workbook_structure['cols'] = self.__cols
