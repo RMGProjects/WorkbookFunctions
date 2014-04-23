@@ -1,4 +1,5 @@
 import datetime, itertools, os, random, re, json
+from dateutil import parser
 
 class _InputError(Exception):
 	def __init__(self, value):
@@ -347,8 +348,8 @@ class Dates:
 		user may optionally provide a strp_format argument that is passed to 
 		datetime.strptime() in order to convert the date found in the file name to 
 		a datetime.date() object. In most cases this will not be necessary as the
-		non-numeric characters of the date string are stripped and then converted
-		using either "%d%m%Y" or "%d%m%y" which will cover most cases.\n
+		we use dateutil.parser.parse in the code by default. If that is giving
+		perverse results, then by all means pass an strp_format argument.\n
 		The user is notified in the dictionary if any conversions are impossible, or
 		the regular expression does not identify a date like string in the filelists.
 		
@@ -369,27 +370,25 @@ class Dates:
 			for file in file_list_dict[folder]:
 				result = re_compiler.search(file)
 				if not result:
-					No_match.append(file)
+					No_file_match.append(file)
 					count +=1
 					continue
 				else:
 					date_group = result.group()
-					date_value = ''.join(re.findall(r'\d+', date_group))
 					if strp_format:
 						try:
-							d_date = datetime.datetime.strptime(date_value, strp_format).date()
+							d_date = datetime.datetime.strptime(date_group, strp_format).date()
 						except ValueError:
 							Bad_date_conversion.append(file)
+							count+=1
 							continue
 					else:
-						try: 
-							d_date = datetime.datetime.strptime(date_value, "%d%m%Y").date()
+						try:
+							d_date= parser.parse(date_group, fuzzy=True, dayfirst = True).date()
 						except ValueError:
-							try:
-								d_date = datetime.datetime.strptime(date_value, "%d%m%y").date()
-							except ValueError:
-								Bad_date_conversion.append(file)
-								continue
+							Bad_date_conversion.append(file)
+							count+=1
+							continue
 					if date_dict[sheets[count]] != d_date:
 						Mismatches[sheets[count]] = (date_group, date_dict[sheets[count]])
 				count+=1
