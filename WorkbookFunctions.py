@@ -650,7 +650,12 @@ class workbook_structure:
 												 start_row_dict.iteritems()}
 		self.workbook_structure['end_rows'] = {key : row - 1 for key, row in 
 												 end_row_dict.iteritems()}
-		self.workbook_structure['cols'] = self.__cols
+		#self.workbook_structure['cols'] = self.__cols
+		cols = []
+		for i in range(0, len(self.__cols)):
+			cols.append(self.__cols[i]-1)
+		self.workbook_structure['cols'] = cols
+		
 	
 	def save_structure(self, top_folderpath):
 		if not isinstance(top_folderpath, str):
