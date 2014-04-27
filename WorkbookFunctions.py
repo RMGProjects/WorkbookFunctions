@@ -633,7 +633,7 @@ class workbook_structure:
 		self.__date_dict = Dates_class_object.check_all_dates()
 		self.__date_list = [value for key, value in self.__date_dict.iteritems()]
 		self.__start_list = [value for key, value in start_row_dict.iteritems()]
-		self.__end_list = [value for key, value in start_row_dict.iteritems()]
+		self.__end_list = [value for key, value in end_row_dict.iteritems()]
 		self.__cols = cols_list
 		if not all(isinstance(date, datetime.date) for date in self.__date_list):
 			raise _InputError("All dates values in workbook must be datetime.date objects")
@@ -648,6 +648,8 @@ class workbook_structure:
 											self.__date_dict.iteritems()}
 		self.workbook_structure['start_rows'] = {key : row - 1 for key, row in 
 												 start_row_dict.iteritems()}
+		self.workbook_structure['end_rows'] = {key : row - 1 for key, row in 
+												 end_row_dict.iteritems()}
 		self.workbook_structure['cols'] = self.__cols
 	
 	def save_structure(self, top_folderpath):
