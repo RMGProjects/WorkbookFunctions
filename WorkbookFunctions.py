@@ -75,7 +75,32 @@ class Columns:
 			disparity_dict[active_sheet()].extend(sheet_disparities)
 			return
 		return
+	
+	def __rename_headers(self, start_row):
+		"""
+		start_row	: int
+		return		: None
+		method		: hidden
 		
+		Helper function that replaces values found in each cell referenced by 
+		start_row and self.column_values. The value found in each cell is stripped,
+		lowered and split. If the length of the resulting list is greater than
+		1, then the elements of the list are joined with the '_' character and the
+		result then becomes that cell value. IF the length of the list is 1, then 
+		the cell value becomes the 0th element of the list, unless that value is
+		'none' in which case no value is inserted.\n
+		Function is called in compare_all_columns.
+		"""
+		for col in self.column_values:
+			header_val = str(Cell(start_row, col).value).strip().lower().split()
+			if len(header_val) > 1:
+				Cell(start_row, col).value = '_'.join(header_val)
+			else:
+				if header_val[0] == 'none':
+					continue
+				Cell(start_row, col).value = header_val[0]
+		return
+				
 	def compare_all_columns(self, start_row_dict):
 		"""
 		start_row_dict	: dict
@@ -85,6 +110,8 @@ class Columns:
 		Returns dict that has a key for each sheet name in the workbook and values 
 		that are the column header values that differ from a master list of values,
 		that is drawn from the first sheet in the workbook.\n
+		The values found on the master sheet, and each subsequent sheets are 
+		renames by calling __rename_headers before being compared.\n
 		All values are created by calling get_values(), and the arguments to that 
 		function are supplied by getting the start row from the start_row_dict and 
 		the self.column_values object.
@@ -96,9 +123,11 @@ class Columns:
 			
 		disparity_dict = {sheet : [] for sheet in sheets} 
 		active_sheet(sheets[0])
+		self.__rename_headers(start_row_dict[sheets[0]])
 		master_list = self.get_values(start_row_dict[sheets[0]])
 		for sheet in sheets[1:]:
 			active_sheet(sheet)
+			self.__rename_headers(start_row_dict[sheet])
 			sheet_list = self.get_values(start_row_dict[sheet])
 			sheet_disparities = self.__compare_values(master_list, sheet_list)
 			self.__update_disparity_dict(sheet_disparities, disparity_dict)
@@ -573,6 +602,7 @@ class sheet_compiler:
 		sub_string1		: string
 		sub_string2		: string or None
 		return			: formatted string
+		method			: visible
 
 		Returns formatted string that gives report to user as to success of the
 		compile operation.\n
@@ -630,6 +660,27 @@ class sheet_compiler:
 			
 class workbook_structure:
 	def __init__(self, Dates_class_object, start_row_dict, end_row_dict, cols_list):
+		"""
+		Dates_class_object	: WorkbookFunctions.Dates object
+		start_row_dict		: dict
+		end_row_dict		: dict
+		cols_list			: list
+		
+		Class for creating a json object that defines the workbook structure with
+		a view to passing the json to a program that uses it to iterate through a
+		pandas ExcelFile object in order to extract the relevant data. 
+		
+		Initialise the class by passing a WorkbookFunctions.Dates object, a 
+		start_row_dict and end_row_dict as created by WorkbookFunctions.FindPoints
+		class methods and a list of columns that represent the columns that will 
+		be retained (in the subsequent pd.ExcelFile routine).\n
+		All inputs are checked, and a date dict is created by calling 
+		WorkbookFunctions.Dates.check_all_dates() method.\n
+		All values in the objects passed are modified to be ready for use in the 
+		ExcelFile routine that will follow.\n
+		The class has a workbook_structure attribute accessible by the user, that
+		is the dict that will be saved to json when save_structure method is called.
+		"""
 		self.__date_dict = Dates_class_object.check_all_dates()
 		self.__date_list = [value for key, value in self.__date_dict.iteritems()]
 		self.__start_list = [value for key, value in start_row_dict.iteritems()]
@@ -655,6 +706,13 @@ class workbook_structure:
 		
 	
 	def save_structure(self, top_folderpath):
+		"""
+		top_folderpath	: string
+		return			: string
+		
+		Function saves the workbook_structure attribute of the class to json in the
+		folder passed as top_folderpath.
+		"""
 		if not isinstance(top_folderpath, str):
 			raise _InputError("top_folderpath must be a string value")
 		os.chdir(top_folderpath)
@@ -665,8 +723,9 @@ class workbook_structure:
 
 def rename_sheets(prefix):
 	"""
-	suffix : string
-	return : None
+	suffix 	: string
+	return 	: None
+	method	: visible
 	
 	Renames sheets according to prefix + two digit serial
 	"""
@@ -688,3 +747,38 @@ def rename_sheets(prefix):
 			rename_sheet(sheets[x], codeList[x])
 	return		
 
+def unmerge_data(start_row_dict, end_row_dict, cols_list, headers_only = True):
+	"""
+	start_row_dict 	: dict
+	end_row_dict	: dict
+	cols_list		: list
+	headers_only	: bool
+	return			: None
+	method			: visible
+	
+	Function for unmerging cells on sheets. The start and end_row dicts should be 
+	those as created by the FindPoints class methods. cols_list is a list of cols that
+	may contain cells that should be unmerged. By default headers_only is True and
+	this means only cells in the first row will be unmerged (that row represented
+	by the integer in the start_row_dict - this should represent the headers if
+	created as described in FindPoints documentation). If headers_only is false, 
+	then all Cells in the column until the row represented by the integer in 
+	end_row_dict will be unmerged (where they are in fact merged). The values of the
+	merged cell are propagated to all cells in the merged range.\n
+	Makes use of the DataNitro function unmerge_range.\n
+	NB: This function is very slow to execute!
+	"""
+	sheets = all_sheets()
+	for sheet in sheets:
+		active_sheet(sheet)
+		for col in cols_list:
+			row = start_row_dict[sheet]
+			unmerge_range(Cell(row, col), copy_values = True)
+			row += 1
+			if headers_only:
+				continue
+				break
+			while row <= end_row_dict[sheet]:
+				unmerge_range(Cell(row, col), copy_values = True)
+				row +=1
+	return
