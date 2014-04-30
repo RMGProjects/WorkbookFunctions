@@ -84,8 +84,8 @@ Additionally note that the `**`kwargs should be named so as to be sortable into 
 
 **Attributes**<br/>
 The `sheet_compiler` Class has only two attributes:<br/>
-+`wf.sheet_compiler.file_dict` : dictionary of the `**`kwargs passed to the constructor. 
-+`wf.sheet_compiler.top_folderpath` : string of top_folderpath argument passed to the class constructor.
++ `wf.sheet_compiler.file_dict` : dictionary of the `**`kwargs passed to the constructor. 
++ `wf.sheet_compiler.top_folderpath` : string of top_folderpath argument passed to the class constructor.
 
 ####Getting a File List Dict <br/>
 Before compiling any sheets we need to know what files are contained in the folders we are going to work with. A dict of the files in the directories can be obtained by calling the `get_file_list_dict()` method. The syntax for this method is as follows: <br/>
@@ -369,7 +369,7 @@ These filenames are consecutive days, but the format is not consistent. Sometime
 
 The regular expression that would identify the date component of all of these strings is:
 
-"\d+\.+\d+\.\d+
+"\d+\.+\d+\.\d+"
 
 If you are unclear as to why, then please follow the above link and revise regular expressions. 
 
