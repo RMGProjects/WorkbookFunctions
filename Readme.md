@@ -80,7 +80,7 @@ compiler = wf.sheet_compiler(r'C:DataFolder',
 
 Please note the use of the raw string literal (`r'`) when providing the path name. This is needed when paths contain backslashes (which they nearly always do) as the backslash is a special character in python.
 
-Additionally note that the `**`kwargs should be named so as to be sortable into a logical order. For example if working with folders with folder that contain data for May, June, July, then the `**`kwargs should be `folder1`, `folder2` and `folder3`, rather than named by month. This is because if named as shown the folders are sortable into an order that matches the reality of the data that the folders actually contain. This will become important later on when working with the wf.Dates.compare_cell_file_date()` method. 
+Additionally note that the `**kwargs` should be named so as to be sortable into a logical order. For example if working with folders with folder that contain data for May, June, July, then the `**`kwargs should be `folder1`, `folder2` and `folder3`, rather than named by month. This is because if named as shown the folders are sortable into an order that matches the reality of the data that the folders actually contain. This will become important later on when working with the `wf.Dates.compare_cell_file_date()` method. 
 
 **Attributes**<br/>
 The `sheet_compiler` Class has only two attributes:<br/>
