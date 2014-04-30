@@ -17,8 +17,8 @@ The aim of the library is to assist in the following stages of creating data set
 	+ Making various checks with regard to dates on each sheet
 	+ Identifying the 'headers' on each sheet
 	+ Identifying the end point of the data on each sheet
-	+ Checking that 'headers' have the same meaning on each sheet
-
+	+ Checking that 'headers' have the same meaning on each sheet and consistent names
+	+ Unmerging cells
 + Creating an object that describes the data structure of each worksheet that can then be passed to a pandas program that will use the information to create a DataFrame that includes all relevant data on each sheet.
 
 In an ideal world I would create a set of proper documentation for this library, perhaps one day this will happen. In the meantime this readme will follow the above aims in order that they appear such that the use of the library can be explained to those for whom the library is intended. Explaining the module in the order of the tasks makes sense as the workflow will generally always follow the same pattern. Any additional useful tips will be provided along the way. 
@@ -52,7 +52,7 @@ Many times the data that we work with are in folders that contain a number of Ex
 
 The WorkbookFunctions module provides the `sheet_compiler` class object for compiling sheets from a number of workbooks into a single (new) workbook. Here are some facts about the sheet_compiler class:
 
-+ The compile operations the class undertakes can only compile sheets from Excel workbooks in the same directory. Multiple directories cannot be used. 
++ The compile operations the class undertakes can copy sheets from Excel Workbooks stored in any number of directories
 + The compile operations the class undertakes can only select and copy one sheet per workbook to the new workbook created.
 + The compile operations the class undertakes will only copy a sheet if the sheet is uniquely identified in the workbook according to the arguments provided by the programmer. More on this below
 
@@ -61,55 +61,66 @@ The WorkbookFunctions module provides the `sheet_compiler` class object for comp
 #### Creating a `sheet_compiler` Object <br/>
 The syntax to create a sheet_compiler object is :
 
-`wf.sheet_compiler(filepath)`
+`wf.sheet_compiler(top_folderpath, **kwargs)`
 
 |     |     |
 | --- | --- |
-|filepath: | string of path to file directory to be worked with
+| `top_folderpath`: | string of path to file directory where the objects created by WorkbookFunctions will be stored |
+| `**kwargs`: | a number of keyword arguments are accepted. These should be strings of file paths that point to directories where Excel Workbooks from which sheets to be compiled are located. There is no restriction on the number of `**`kwargs except that the programmer must provide at least one. |
 
-Thus to initialise sheet_compiler object, pass the filepath that identifies the folder which contains the Excel workbooks from which you wish to copy worksheets to a new workbook:
+
+An example call might look like this:
 
 ```python
-compiler = wf.sheet_compiler(r'path\to\folder')
+compiler = wf.sheet_compiler(r'C:DataFolder',
+							 folder1 = r'C:DataFolder\January_2014,
+							 folder2 = r'C:DataFolder\February_2014',
+							 folder3 = r'C:DataFolder\March_2014')
 ```
 
 Please note the use of the raw string literal (`r'`) when providing the path name. This is needed when paths contain backslashes (which they nearly always do) as the backslash is a special character in python.
 
-####Getting a File List <br/>
-Before compiling any sheets we need to know what files are contained in the folder we are going to work with. A list of the files in the directory can be obtained by calling the `get_file_list()` method. The syntax for this method is as follows: <br/>
+Additionally note that the `**`kwargs should be named so as to be sortable into a logical order. For example if working with folders with folder that contain data for May, June, July, then the `**`kwargs should be `folder1`, `folder2` and `folder3`, rather than named by month. This is because if named as shown the folders are sortable into an order that matches the reality of the data that the folders actually contain. This will become important later on when working with the wf.Dates.compare_cell_file_date()` method. 
 
-`wf.sheet_compiler.get_file_list()`
+**Attributes**<br/>
+The `sheet_compiler` Class has only two attributes:<br/>
++`wf.sheet_compiler.file_dict` : dictionary of the `**`kwargs passed to the constructor. 
++`wf.sheet_compiler.top_folderpath` : string of top_folderpath argument passed to the class constructor.
+
+####Getting a File List Dict <br/>
+Before compiling any sheets we need to know what files are contained in the folders we are going to work with. A dict of the files in the directories can be obtained by calling the `get_file_list_dict()` method. The syntax for this method is as follows: <br/>
+
+`wf.sheet_compiler.get_file_list_dict()`
 
 |     |     |
 | --- | --- |
-|**Returns**: List of files in the filepath provided to the `sheet_compiler` Class object creator |
+|**Returns**: Returns a dict of folder names passed during compiler constructor as `**`kwargs and values that are lists of the files found in the associated folders.|
 
 So an example call might look like:
 
 ```python
-file_list = compiler.get_file_list()
-file_list
+file_list_dict = compiler.get_file_list_dict()
+file_list_dict
 ```
 
-> This file list should be checked by the user. 
+> This file dict should be checked by the user. 
 
-If there are non excel files, these should be manually removed as this list will eventually be passed to the compiler. The compiler does not care in what order the list is, but the user might care. In the workbook of compiled sheets for example the user wants the sheets to appear in ascending order with regard to date of the worksheet. Typically the files we are working with a named according to date. However, the `get_file_list()` method uses the `os.listdir()` function which does not guarantee order. Therefore the order of the list should be manually manipulated until the user is satisfied that the workbooks will be approached in the order in which he would like to the see the worksheets in the compiled workbook. See the Troubleshooting.md file for some examples of how to deal with tricky situations regarding the file list.  
+If there are non excel files, these should be manually removed as this dict will eventually be passed to the compiler. The compiler does not care in what order the lists within the dict are in, but the user must care. In the workbook of compiled sheets for example, the user wants the sheets to appear in ascending order with regard to date of the worksheet. Typically the files we are working with a named according to date. However, the `get_file_list_dict()` method uses the `os.listdir()` function which does not guarantee order. Therefore the order of the lists within the dict should be manually manipulated until the user is satisfied that the workbooks will be approached in the order in which he would like to the see the worksheets in the compiled workbook. 
 
 ####Compiling the Sheets<br/>
-Once the file_list is as the user wishes it to be it can be passed to the `compile_sheets()` method. The compile sheet method, actually does the work of compiling the sheets and returns a string with a report about the success of the compile. If some sheets could not be moved the user is notified by the returned string. 
+Once the `file_list_dict` is as the user wishes it to be it can be passed to the `compile_sheets()` method. The compile sheet method, actually does the work of compiling the sheets and returns a string with a report about the success of the compile. If some sheets could not be moved the user is notified by the returned string. 
 
 The syntax for the `compile_sheets()` method is: </br>
 
-`wf.sheet_compiler.compile_sheets(file_list, new_wkbk_name, sub_string1 [, sub_string2])`
+`wf.sheet_compiler.compile_sheets(file_list_dict, new_wkbk_name, sub_string1 [, sub_string2])`
 
 |     |     |
 | --- | --- |
-| file_list: | A list of file names from which a worksheet will be copied |
-| new_wkbk_name: | The name of the new workbook to which the individual worksheets will be compiled including the file extension (e.g. "compiled_workbook.xls") |
-| sub_string1: | A string that uniquely identifies a sheet in the workbooks from which a sheet will be copied |
-| sub_string2: | (Optional) A string that uniquely identifies a sheet in the workbooks from which a sheet will be copied |
+| `file_list_dict`: | A dict of folder keys and lists values that contain the Workbook filenames from which sheets will be compiled |
+| `new_wkbk_name`: | The name of the new workbook to which the individual worksheets will be compiled including the file extension (e.g. "compiled_workbook.xls") |
+| `sub_string1`: | A string that uniquely identifies a sheet in the workbooks from which a sheet will be copied |
+| `sub_string2`: | (Optional) A string that uniquely identifies a sheet in the workbooks from which a sheet will be copied |
 | **Returns**: |String that indicates to user the success of the compile operation. |
-
 
 As all the workbooks from which sheets will be copied tend to be of the same type, they will tend to have the same sheet names. The arguments sub_string1 and sub_string2 are passed to the method which upon opening the relevant workbook will search for the sheet to be moved by creating a list of sheet names in that workbook. The sheet names are strings. Therefore, the user should look at the sheet names used in the workbooks from which sheets will be copied and identify up to two sub_strings that will uniquely identify the sheet that is to be copied to the new workbook. 
 
@@ -122,13 +133,15 @@ By way of example suppose that each workbook contained three sheets:
 If we were interested to obtain the second of those sheets we could pass `sub_string1 = "Sewing"`, `sub_string2 = "Summary"` as arguments to the `compile_sheets()` method. The full syntax might look look like this:
 
 ```python
-compile_result = compiler.compile_sheets(file_list, 'compiled_workbook.xls', 'Sewing', 'Summary')
+compile_result = compiler.compile_sheets(file_list_dict, 'compiled_workbook.xls', 'Sewing', 'Summary')
 compile_result
 ```
 
-The variable `compile_result` is a string that is a report that tells the user how successful the operation was for each file. 
+The variable `compile_result` is a string that is a report that tells the user how successful the operation was for each file. This is the string returned by the method.
 
-> The user should examine the output and manually move sheets as necessary from any files where the compile operation was not successful. 
+Incidentally, during the compile process the file_list_dict is saved in `.json` format in the folder as pointed to by the `wf.sheet_compiler.top_folderpath` attribute.
+
+> The user should examine the output and manually move sheets as necessary from any files where the compile operation was not successful. Sheets should be moved so as to preserve the logic of the order in the workbook. 
 
 ---
 
@@ -136,8 +149,7 @@ The variable `compile_result` is a string that is a report that tells the user h
 ###Purpose and Information<br/>
 When testing the structure of worksheets in a workbook, and their contents, it is useful if the sheets are named consistently, so that they can be easily identified by the user as needing attention. 
 
-The WorkbookFunctions module provides the `rename_sheets()` function for this purpose. This function will rename up to 99 sheets acording to prefix + 2 digit serial. Practically speaking it is not recommended to work with files with more than 99 sheets, as the memory used can exceed that available and tasks become difficult to execute.
-
+The WorkbookFunctions module provides the `rename_sheets()` function for this purpose. This function will rename up to 180 sheets according to prefix + 3 digit serial. Practically speaking it is not recommended to work with files with more than 180 sheets, as the memory used can exceed that available and tasks become difficult to execute without error.
 
 ###Workflow and Syntax<br/>
 The syntax for the function is as follows:
@@ -146,7 +158,7 @@ The syntax for the function is as follows:
 
 |     |     |
 | --- | --- |
-| prefix : |string|
+| `prefix` : |string|
 | **Returns** : |`None`|
 
 An example function call might look like this:
@@ -161,7 +173,6 @@ wf.rename_sheets('P')
 ###Purpose and Information<br/>
 Dates are incredibly important. We need to be able to accurate identify which date all data come from, and this is a job that is not frequently made easy by the people supplying the data. For one thing, the date may be part of some other complex string, dates may be accidentally repeated etc. For that reason the WorkbookFunctions module provides the `Dates` class object. Generally the cell that contains the date will be the same on each sheet of the workbook. The `Dates` class object will do a number of things for the user, to be seen below:
 
-
 ###Workflow and Syntax<br/>
 ####Creating a `wf.Dates` object<br/>
 The syntax to create a Dates object is :
@@ -170,10 +181,10 @@ The syntax to create a Dates object is :
 
 |     |     |
 | --- | --- |
-|date_cell_ref: |  tuple of two integers that reference the cell on which the date representation is located |
-|strp_format: | (Optional) string representation of date format to be parsed by `datetime.datetime.strptime()` function |
-|separator: | (Optional) separator to be used to split date representation string into a list using python `string.split()` method |
-|index_pos: | (Optional) index position of relevant date string in the list that is a result of splitting the date representation using the separator. |
+|`date_cell_ref`: |  tuple of two integers that reference the cell on which the date representation is located |
+|`strp_format`: | (Optional) string representation of date format to be parsed by `datetime.datetime.strptime()` function |
+|`separator`: | (Optional) separator to be used to split date representation string into a list using python `string.split()` method |
+|`index_pos`: | (Optional) index position of relevant date string in the list that is a result of splitting the date representation using the separator. |
 
 Some explanation is needed here. All dates on every worksheet will be converted into `datetime.date` objects in order for the other `wf.Dates` methods to be executable. Sometimes Excel dates can be read directly by DataNitro as `datetime.date` objects. In other cases they will be read as strings that need to be manipulated before they can be converted to `datetime.date` objects. 
 
@@ -222,6 +233,8 @@ And indeed the arguments when creating the Dates object mirror that exact proces
 dates = wf.Dates((2, 19), %d/%m/%y", ':', -1)
 ```
 
+**Attributes**<br/>
+The attributes of the `wf.Dates` Class are the arguments passed to the constructor. 
 
 ####Getting a Single Date Value<br/>
 To get a single date value from the active worksheet use the `wf.Dates.cell_to_date()` method. The syntax for this is simply:
@@ -236,8 +249,10 @@ An example call might look like:
 
 ```python
 single_date = dates.cell_to_date()
+single_date
 ```
 
+This method can be used to check the parameters provided to the `wf.Dates` class constructor. 
 
 ####Getting All Dates in Workbook<br/>
 To get a dictionary of all the dates found in the workbook (including sheets where date conversion was not possible given the arguments to the `Dates` Class object creator) use the `check_all_dates()` method. The syntax for calling this method is as follows:
@@ -246,18 +261,18 @@ To get a dictionary of all the dates found in the workbook (including sheets whe
 
 |     |     |
 | --- | --- |
-|**Returns**: | A dictionary that has keys that are the names of every sheet in the workbook, and values that are either the `datetime.date` objects found on those sheets, or a string indicating that the conversion to `datetime.date` object was not possible given the arguments provided to the `Dates` Class object creator. 
+|**Returns**: | A dict that has keys that are the names of every sheet in the workbook, and values that are either the `datetime.date` objects found on those sheets, or a string indicating that the conversion to `datetime.date` object was not possible given the arguments provided to the `wf.Dates` Class object constructor. 
 
 An example call might look as follows:
 
 ```python
 dates_dict = dates.check_all_dates()
+dates_dict
 ```
 
 > The user should examine this dictionary to check that every sheet has a date that is convertible given the arguments supplied. 
 
-The point of the WorkbookFunctions module is not to deal with every possible alternative, but rather to show the user where the assumed standard format is not applicable. If on certain sheets the standard format is not applicable, changes must be made, either manually, or by using general DataNitro data manipulation techniques in order to ensure that the format is the same on every sheet, and therefore the methods can run as intended on every sheet in the Workbook. Therefore, once the dictionary is created and errors identified, changes should be made to the worksheets themselves and the method re-called until such time as a `datetime.date` is available for every worksheet. The techniques used to ensure the formatting is standard will differ according to the workbook being worked with. See the Troubleshooing file for some tips. Every time a data technician encounters an issue this should be logged along with the solution such that the group can learn from techniques developed. 
-
+The point of the WorkbookFunctions module is not to deal with every possible alternative, but rather to show the user where the assumed standard format is not applicable. If on certain sheets the standard format is not applicable, changes must be made, either manually, or by using general DataNitro data manipulation techniques in order to ensure that the format is the same on every sheet, and therefore the methods can run as intended on every sheet in the Workbook. Therefore, once the dictionary is created and errors identified, changes should be made to the worksheets themselves and the method re-called until such time as a `datetime.date` is available for every worksheet. The techniques used to ensure the formatting is standard will differ according to the workbook being worked with. Every time a data technician encounters an issue this should be logged along with the solution such that the group can learn from techniques developed. 
 
 ####Getting All Date Cell Types in Workbook<br/>
 If the date dictionary has many date values that are no found using the above, it can be useful to do a quick check of the types of value found at the date cell on each sheet. To do this use the `get_types()` method. The syntax for calling this method is as follows:
@@ -267,125 +282,128 @@ If the date dictionary has many date values that are no found using the above, i
 An example call might look as follows:
 
 ```python
-dates__type_dict = dates.get_types()
+dates_type_dict = dates.get_types()
+dates_type_dict
 ```
 
+>The user should examine carefully the dict returned. 
+
+Some manual manipulation may be necessary on certain sheets. If the cell that references the date moves around within the sheets on the workbook, or the format changes, then the use can either manually manipulate the cells or write a small program outside of the WorkbookFunctions library context in order to ensure the values referenced by the `date_cell_ref` are consistent. It is not the work of WorkbookFunctions to do this for the user, but only to highlight where more attention is needed. 
 
 ####Checking for Duplicate Dates<br/>
 Sometimes the persons providing this data forget to change the date on the worksheets, and this can lead to duplicate dates. In order to identify duplicate dates in the Workbook use the `duplicates()` method. The syntax for this method is as follows:
 
-`wf.Dates.duplicates([date_dict])`
+`wf.Dates.duplicates()`
 
 |     |     |
 | --- | --- |
-| date_dict: | (Optional) dictionary of keys that represent every sheet in the workbook and associated `datetime.date` objects |
 | **Returns**: | Dict where dates that are found more than once in the values of date_dict are the keys, and the values are the keys of date_dict at which the duplicate dates are found. |
 
-If the user does not supply a date_dict argument then the method will create one by calling the `wf.Dates.check_all_dates()` method.
+The method will create a dictionary of the dates by calling the one by calling the `wf.Dates.check_all_dates()` method. This unfortunately reduces performance of the method (versus the user being able to provide a dict already created), but it ensures that date_dicts that are *out of date* due to subsequent modification of the worksheets are not used which could lead to perverse results. 
 
-The method will raise an exception if it is not the case that every value is a `dateimte.date` object in either the date_dict passed as argument or the date_dict created when no argument is passed to the method. 
-
-Some data sets are such a mess, that it might be that the user has to create a date_dict himself, using techniques not provided by WorkbookFunctions. In these circumstances this *homemade* date_dict can be passed to the `duplicates()` method. 
+The method will raise an exception if it is not the case that every value is a `dateimte.date` object in date_dict created within the method. 
 
 An example call might be as follows:
 
 ```python
-dates_dict = dates.check_all_dates()
-duplicates_dict = dates.duplicates(dates_dict)
-```
-
-The above call passes the date_dict created by the `check_all_dates()` method, and thus saves the `duplicates()` method some leg work in having to re-create the date_dict. However, the following would be an equally valid alternative:
-
-```python
 duplicates_dict = dates.duplicates()
-```
-
-Alternatively if a *homemade* date_dict has been created not using any `WorkbookFunctions` methods then the call might look like this:
-
-```python
-duplicates_dict = dates.duplicates(homemade_date_dict)
+duplicates_dict
 ```
 
 > The user should examine the output and may have to make manual changes. 
 
 Typically if a date is repeated, the 'true' date can be found by looking at the filename from which that data sheet was extracted. 
 
-
 ####Checking the Relative Order<br/>
 The extent to which the sheets in the workbook need to be in the same order that the dates on the worksheets imply is not totally clear. On the one hand when we read the data from each sheet into and pandas DataFrame the data can simply be sorted according to date. On the other hand if the order of the sheets in the Workbook does not match the order implied by the dates found on the sheets this can be indicative of other problems with the data. Therefore, at a minimum the user should check that the order of the sheets matches the order implied by the dates on the sheets using the `relative_order()` method. The syntax for this method is as follows:
 
-`wf.Dates.relative_order([date_dict])`
+`wf.Dates.relative_order()`
 
 |     |     |
 | --- | --- |
-| date_dict: | (Optional) dictionary of keys that represent every sheet in the workbook and associated `datetime.date` objects |
 |**Returns**: | Returns a dictionary that shows order of sheets implied by dates in the date_dict and the actual order of the sheets, if different. |
 
-Again, if the user does not supply a date_dict argument then the method will create one by calling the `wf.Dates.check_all_dates()` method.
+Again a date_dict is created inside the method by calling the `wf.Dates.check_all_dates()` method.
 
-The method will raise an exception if it is not the case that every value is a `dateimte.date` object in either the date_dict passed as argument or the date_dict created when no argument is passed to the method. 
+The method will raise an exception if it is not the case that every value is a `dateimte.date` object in the date_dict created inside the method. 
 
-As above, the syntax allows the user to pass a 'homemade' date_dict, the date dict created previously, or None. So calls might look as follows:
-
-```python
-dates_dict = dates.check_all_dates()
-relative_dict = dates.relative_order(dates_dict)
-```
-
-or
+An example call might look like this:
 
 ```python
 relative_dict = dates.relative_order()
+relative_dict 
 ```
 
-or
-
-```python
-relative_dict = dates.relative_order(homemade_date_dict)
-```
-
-> The output dictionary should at least be looked at by the user. 
+> The output dictionary should at least be looked at by the user. Action may or may not be necessary. 
 
 If simple changes can be made to ensure the order, then they should be made, but any changes should be verified by looking at the files from which the data sheets are drawn. 
 
 If changes to the sheet order are made it is useful to then use the `wf.rename_sheets()` function to rename the sheets according to the new order. 
 
-####Checking the Date Discontinuities<br/>
-In theory we should have six workbooks per week from which sheets have been extracted and compiled. Therefore if there are any discontinuities in the dates greater than one day, then it is possible that some files were missing from the folder from which sheets were compiled, or data might otherwise be missing. In order to check whether there are such discontinuities use the `discontinuities()` method. The syntax for this method is as follows:
+####Comparing Dates on Sheets to Date in Filenames<br/>
+Sometimes if the `wf.Dates.relative_order()` and `wf.Dates.duplicates()` methods are bringing errors to the attention of the user, it can be helpful in seeing where these errors have been generated to compare the dates found on the worksheets with those found in the filenames of the Workbooks from which those sheets were compiled. In order to do this the `wf.Dates.compare_cell_file_date()` method is available. They syntax is as follows:
 
-`wf.Dates.discontinuities(discontinuity_value[,date_dict])`
+`wf.Dates.compare_cell_file_date(file_list_dict, regex[, strp_format])`
 
 |     |     |
 | --- | --- |
-| date_dict: | (Optional) dictionary of keys that represent every sheet in the workbook and associated `datetime.date` objects |
+| `file_list_dict`: | A dict of folder keys and lists values that contain the Workbook filenames from which sheets will be compiled |
+| `regex`: | string to pass to `re.compile()` that will identify the date component of the filenames in the `file_list_dict` |
+| `strp_format`: | (Optional) A string to convert the date component of the filenames in the `file_list_dict' to `datetime.date()` objects |
+| **Returns**: |Returns a dictionary where keys are sheet names and values are tuples where	first element of the tuple is the date as per the file name taken from `file_list_dict`, and the second is the date as per date cell taken from a `date_dict` that is created upon the method call. There are only keys for those tuples who's values are not equal. If date the regex provided does not match a date, or the date is not convertible, then the user is notified by a string inside the dict. |
+
+Some explanation is needed here:
+
+The `file_list_dict` should be that which was created when compiling the sheets. If that object is still in the computer memory, then pass it directly, otherwise open the 'file_list_dict.json' that was created when the sheets were originally compiled and pass that. 
+
+The user must supply a regular expression (`regex`) argument that will identify the date component of the file names in the `file_list_dict`. This regular expression is passed to `re.compile()` and each file name is searched using `re.search` and returning the matched group. 
+
+>If you need to revise regular expressions please see here: https://docs.python.org/2/library/re.html
+
+By way of quick example, we may need to identify the date component of the following filenames:<br/>
++'Production Report 1.02.13 Nishat Fabrics.xls'
++'Production Report 01..2.13 Nishat Fabrics.xls'
++'Production Report 03.1.2013 Nishat Fabrics.xls'
+
+These filenames are consecutive days, but the format is not consistent. Sometimes there is zero padding, sometimes not, and in the second example there is more than one full stop. 
+
+The regular expression that would identify the date component of all of these strings is:
+
+"\d+\.+\d+\.\d+
+
+If you are unclear as to why, then please follow the above link and revise regular expressions. 
+
+The date portion of each filename when identified by the regular expression search is then converted to a `datetime.date()` object using the `shutil` date parser, which assumes that the day comes first (rather than month) and the `fuzzy` option is set to `True` (see source code). This means the date will be converted as best as it can be. If this automated method is creating bizarre results, then you probably have a date string that the `shutil` parser cannot deal with. In such situations you can pass the `strp_format` argument to have more control over how the conversion to `datetime.date()` is made. 
+
+>The output dict should be examined carefully by the user.
+
+The output may help the user to decide how and why (and therefore how to correct) errors that have been identified when looking for duplicates and at the relative order. 
+
+It should be noted that the method assumes that the order the filenames are approached in the `file_list_dict` match the order of the worksheets. If this is not the case, then many false mismatches will be generated. Therefore if extensive re-ordering of worksheets has been undertaken since compiling, the method will produce perverse results. 
+
+####Checking the Date Discontinuities<br/>
+In theory we should have six workbooks per week from which sheets have been extracted and compiled. Therefore if there are any discontinuities in the dates greater than one day, then it is possible that some files were missing from the folder from which sheets were compiled, or data might otherwise be missing. In order to check whether there are such discontinuities use the `wf.Dates.discontinuities()` method. The syntax for this method is as follows:
+
+`wf.Dates.discontinuities(discontinuity_value)`
+
+|     |     |
+| --- | --- |
 | **Returns**: | Returns list of tuples where each tuple is a pair of contiguous sheets where the dates found on those sheets indicate a discontinuity of more than the number of days specified as the discontinuity_value. |
 
-Again, if the user does not supply a date_dict argument then the method will create one by calling the `wf.Dates.check_all_dates()` method.
+The method will create a date_dict by calling the `wf.Dates.check_all_dates()` method upon the call. 
 
-The method will raise an exception if it is not the case that every value is a `dateimte.date` object in either the date_dict passed as argument or the date_dict created when no argument is passed to the method. 
+The method will raise an exception if it is not the case that every value in the date_dict created on the method call is a `dateimte.date` object. 
 
-As above, the syntax allows the user to pass a 'homemade' date_dict, the date dict created previously, or None. So calls might look as follows for checking for discontinuities of two days or more:
-
-```python
-dates_dict = dates.check_all_dates()
-dicontinuity_dict = dates.discontinuities(2, dates_dict)
-```
-
-or
+An example call may look as follows:
 
 ```python
-dicontinuity_dict = dates.discontinuities(2)
-```
-
-or
-
-```python
-dicontinuity_dict = dates.discontinuities(2, homemade_date_dict)
+dicontinuity_list = dates.discontinuities(2)
+dicontinuity_list
 ```
 
 > The resulting list should be examined, and any causes of missing data sheets discussed with the project management. 
 
-Users should log any discontinuities found. If extra data are 'found' upon further investigation, the data from these sheets should be added to the folder directory and the processes described above should be re-enacted. 
+Users should log any discontinuities found. If extra data are 'found' upon further investigation, the data from these sheets should be added to the folder directory and the processes described above should be repeated. 
 
 ---
 
@@ -408,17 +426,21 @@ The synatax for creating a `FindPoints` Class object is as follows:
 
 |     |     |
 | --- | --- |
-| col: | integer value of the column to be searched |
-| start_row: | integer value of the first row of the column to be searched |
-| end_value: | string value then when found indicates that the 'point' has been found |
-| adjustments: | (Optional) negative or positive integer value by which amount the final row value will be adjusted |
+| `col`: | integer value of the column to be searched |
+| `start_row`: | integer value of the first row of the column to be searched |
+| `end_value`: | string value then when found indicates that the 'point' has been found |
+| `adjustments`: | (Optional) negative or positive integer value by which amount the final row value will be adjusted |
 
 Some explanation is needed here:<br/>
- Suppose that the user wishes to identify the point (meaning row) in which the 'Column Headers' are found. The user should look at the structure of a worksheet and identify a value that when found should indicate that the point has been located. In general the 'headers' found in the worksheets will be the same or very similar. So for example, if in identifying the 'header columns' the first column header is 'Line' and this is found in column 2, then the user would specify the end_value as 'Line', the column value as 2, and then should specify which row the `FindPoints` class should begin to search for the end_value. Unless there are special reasons not to, this will generally be row 1. So the syntax for creating a `FindPoints` Class object in such circumstances would be as follows:<br/>
+ Suppose that the user wishes to identify the point (meaning row) in which the 'Column Headers' are found. The user should look at the structure of a worksheet and identify a value that when found should indicate that the point has been located. In general the 'headers' found in the worksheets will be the same or very similar. So for example, if in identifying the 'header columns' the first column header is 'Line' and this is found in column 2, then the user would specify the end_value as 'Line', the column value as 2, and then should specify which row the `FindPoints` class should begin to search for the end_value. Unless there are special reasons not to, this will generally be row 1. So the syntax for creating a `wf.FindPoints` Class object in such circumstances would be as follows:<br/>
 
 ```python
 headers = wf.FindPoints(2, 1, 'Line')
 ```
+
+**Attributes**<br/>
+The attributes of the class are the arguments passed to the constructor. 
+
 
 ####Finding Points on a Single Active Worksheet<br/>
 To find a point (as headers) on a single worksheet use the `find_point()` method. The syntax for this method is as follows:
@@ -438,7 +460,7 @@ header_row = headers.find_point()
 ```
 
 ####Finding All Points in a Workbook<br/>
-To find all points on every sheet in a workbook use the `find_all_points()` method. The syntax for this method is as follows:
+To find all points on every sheet in a workbook use the `wf.FindPoints.find_all_points()` method. The syntax for this method is as follows:
 
 `wf.FindPoints.find_all_points()`
 
@@ -471,17 +493,17 @@ If the user is not totally convinced that the end row needs to be adjusted they 
 
 ##Columns<br/>
 ###Purpose and Information<br/>
-When the data from a workbook is passed to a pandas program to create a DataFrame the user can specifiy which columns of data he wishes to retain. Not every column will be preserved as we are only interested in some of the data that are kept by entities providing data. The argument that is passed to the pandas Workbook parser are integer values of the columns to be retained. Therefore in order to be sure that the same data are taken from every worksheet the user must be satisfied that the same data are in the same columns on every worksheet. Effectively this means checking that the columns 'headers' are the same on every worksheet. In practice that the columns headers are the same and in the same order might in fact be of little practical significance as the entire worksheet could be parsed by pandas and then when the concatenation of the individual worksheet DataFrames happens, the DataFrame columns with the same header values will be automatically aligned. However, there will be cases where certain worksheets have different 'header' values due to typos, or the insertion of a new column, or the column header name is changed. This will cause the pandas program to create a DataFrame that is not hugely useful to the user. Therefore it is useful to check that the colum 'header' values are the same for every worksheet in the workbook beign worked with. To this end `WorkbookFunctions` has provided the `Columns` Class object. 
+When the data from a workbook is passed to a pandas program to create a DataFrame the user can specify which columns of data he wishes to retain. Not every column will be preserved as we are only interested in some of the data that are kept by entities providing data. The argument that is passed to the `pandas.ExcelFile` parser are integer values of the columns to be retained. Therefore in order to be sure that the same data are taken from every worksheet the user must be satisfied that the same data are in the same columns on every worksheet. Effectively this means checking that the columns 'headers' are the same on every worksheet. In practice that the columns headers are the same and in the same order might in fact be of little practical significance as the entire worksheet could be parsed by pandas and then when the concatenation of the individual worksheet DataFrames happens, the DataFrame columns with the same header values will be automatically aligned. However, there will be cases where certain worksheets have different 'header' values due to typos, or the insertion of a new column, or the column header name is changed. This will cause the pandas program to create a DataFrame that is not hugely useful to the user. Therefore it is useful to check that the column 'header' values are the same for every worksheet in the workbook being worked with. To this end `WorkbookFunctions` has provided the `wf.Columns` Class object. 
 
 ###Workflow and Syntax</br>
-####Creating a `Columns` Object <br/>
-The syntax to create a `Columns` class object is as follows:
+####Creating a `wf.Columns` Object <br/>
+The syntax to create a `wf.Columns` class object is as follows:
 
 `wf.Columns(column_values)`
 
 |     |     |
 | --- | --- |
-|column_values: | list of integers representing the locations of the columns of interest. |
+|`column_values`: | list of integers representing the locations of the columns of interest. |
 
 So if the user is interested ultimately in preserving the data from columns 1, 2, 3, 4, 6, 9, 10 and 11, then the syntax for creating the `Columns` object would be as follows:
 
@@ -491,32 +513,35 @@ col_vals = wf.Columns([1, 2, 3, 4, 6, 9, 10, 11])
 
 > An exception will be raised if it is not the case that all elements of the list passed are integers. 
 
+**Attributes**<br/>
+The class only has one attribute, and that is the `columns_values` list passed as argument. 
+
 ####Getting Values for a Specific Row
-To get the column values at a specific row on the active worksheet use the `get_values()` method. The syntax of this method is as follows:<br/>
+To get the column values at a specific row on the active worksheet use the `wf.Columns.get_values()` method. The syntax of this method is as follows:<br/>
 `wf.Columns.get_values(row)`
 
 |     |     |
 | --- | --- |
-| row: | An integer representing the row from which values will be taken |
+| `row`: | An integer representing the row from which values will be taken |
 | **Returns** | Returns list of lowered stripped string values found in each cell referenced by row and each column value as passed to the `Columns` object creator. |
 
 An example call might look like:
 
 ```python
 values = col_vals.get_values(4)
+values
 ```
 
 The above will return a list of the values found in row 4 at the columns referenced by the list passed to the `Columns` object creator. 
 
-
 ####Comparing all Column Values<br/>
-In order to check whether all of the sheets have the same values at specific points then use the `compare_all_columns()` method. The syntax for this method is as follows:
+In order to check whether all of the sheets have the same values at specific points then use the `wf.Columns.compare_all_columns()` method. The syntax for this method is as follows:
 
 `wf.Columns.compare_all_columns(start_row_dict)`
 
 |     |     |
 | --- | --- |
-| start_row_dict: | dict with one key per sheet in the workbook with values that are integers representing the rows in which the column values to be compared are found. |
+| 'start_row_dict': | dict with one key per sheet in the workbook with values that are integers representing the rows in which the column values to be compared are found. |
 | **Returns**: | dict that has a key for each sheet in the workbook and values that are lists that contain those column values which were not located on any sheet when compared with the master sheet. |
 
 Some explanation is needed here: <br/>
@@ -524,7 +549,7 @@ Some explanation is needed here: <br/>
 
 > However, the method was specifically designed to identify differences between sheets with regards to the column 'headers'!
 
-Bearing this is mind therefore, the start_row_dict is an object that should have been created by using the `FindPoints` object methods to locate each row on each sheet where the column 'headers' are found. The method will set the values found on the first sheet as the master values and compare all other values on all other sheets against those values. 
+Bearing this is mind therefore, the start_row_dict is an object that should have been created by using the `wf.FindPoints` object methods to locate each row on each sheet where the column 'headers' are found. The method will set the values found on the first sheet as the master values and compare all other values on all other sheets against those values. 
 
 So, an example call might look like this:
 
@@ -540,31 +565,89 @@ columns_discrepancy_dict
 
 The data should be manipulated such that all columns do represent the same data. It is envisaged that this will happen initially outside of the WorkbookFunctions library, but in the near future such functionality may be added to this library to automate the process. 
 
+Incidentally, the method calls a hidden function `__rename_headers` which strips the values found at each point referenced by the relevant start_row and column value, lowers it, and in cases where the value has more than one *word*, the words are joined with a '_' character. This makes using the columns names easier when ultimately the workbook is passed to program that reads the workdbook as a `pandas.ExcelFile` object. 
+
 ---
 
-##Creating an Object to Describe the Workbook<br/>
-Once the above checks have been made a dictionary can be created that will contain all the information needed to pass to a pandas program to create a single DataFrame from the entire workbook. An example of how this might look is as follows:
+##Workbook Structure<br/>
+###Purpose and Information<br/>
+Once the above checks have been made a dictionary can be created that will contain all the information needed to pass to a pandas program to create a single DataFrame from the entire workbook. To assist in this process the `wf.workbook_structure` Class is provided. 
+
+Why provide a class that deals with this rather than just allowing the user to create a dictionary of the object already created? There are several excellent reasons:
+
+1. By providing a class the resulting object can be indexed with values that are not modifiable by the user, which allows for the next stage of development be be standardised. In the `ExceltoPandas` module that is a companion library to WorkbookFunctions if index names are standardized this reduces the amount of work the user has to do.
+2. The `wf.workbook_structure` Class will recreate a `date_dict` by calling wf.Dates.check_all_dates()`. This will ensure that the most up to date version of the dict is used, which will prevetn accidental error on the part of the user.
+3. pandas thinks about indexing in a different way to Excel. So column 1 in Excel is in fact column 0 in pandas. So the `wf.workbook_structure` Class will make the necessary adjustments to the dictionaries passed as arguments to the constructor. 
+
+###Workflow and Syntax</br>
+####Creating a `wf.workbook_structure` Object <br/>
+The syntax to create a `wf.workbook_structure` class object is as follows:
+
+`wf.workbook_structure(Dates_class_object, start_row_dict, end_row_dict, cols_list)`
+
+|     |     |
+| --- | --- |
+| `Dates_class_object`: | `wf.Dates` object |
+| `start_row_dict`: | dictionary of start rows as created by `wf.FindPoints` |
+| `end_row_dict`: | dictionary of end rows as created by `wf.FindPoints`  |
+| `cols_list`: | list of integers representing the columns to be retained |
+
+The constructor will check all the inputs to ensure they are of the type envisaged. If they are not then an InputError is raised. 
+
+An example call might look like this:
 
 ```python
-start_rows = wf.FindPoints(1, 1, 'Line')
-start_rows_dict = start_rows.find_all_points()
-
-end_rows = wf.FindPoints(4, 1, 'Total', -2)
-end_rows_dict = end_rows.find_all_points()
-
-date = wf.Dates((2, 19), "%d.%m.%Y")
-date_dict = date.check_all_dates()
-
-columns = [1, 2, 3, 4, 6, 9, 10, 11]
-
-Workbook_Structure = {'start_rows' : start_rows_dict,
-					  'end_rows'   : end_rows_dict,
-					  'dates' 	   : date_dict
-					  'cols' 	   : columns 
-					  }
+workbook_structure = wf.workbook_structure(dates, start_row_dict, end_row_dict, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
 ```
 
-The Workbook_Structure object can be saved to .json and then used when creating the pandas DataFrame. 
+**Attribues**<br/>
+The class has only one (visible) attribute, and that is the dictionary of objects that have been modified by the `__init__` method called when the class is intialized. To access this dictionary do the following:
+
+```python
+ws_dict = workbook_structure.workbook_structure
+ws_dict
+```
+
+####Saving the `wf.workbook_structure` Object <br/>
+The workbook strucutre created should be saved as a .json file for use in the next stage of work that will utilize the `ExceltoPandas` module. For this purpose the `wf.workbook_structure.save_structure()` method is available to the user. The syntax of this method is as follows:
+
+`wf.workbook_structure.save_structure(top_folderpath)'
+
+|     |     |
+| --- | --- |
+| `top_folderpath`: | string path to folder where .json will be saved |
+|**Returns** | string
+
+Function saves the workbook_structure attribute of the class to json in the folder passed as top_folderpath.
+
+An example call might look as follows:
+
+```python
+workbook_structure.save_structure(r'path\to\folder')
+```
+
+##Unmerging Cells<br/>
+Merged cells are a massive headache. The value in a group of merged cells only exists in the upper left most cell. That means that all other cells when read by `pandas.ExcelFile` will be missing values. This is hugely problematic if key bits of data exist in merged cells. As an example if multiple rows exist for each 'line' in the excel file, then it will be very hard to merge data from other sources based on 'line'. In fact, if there is merged data in **any** of the columns that are to be retained, then those cells need to be unmerged and the value that previously existed only in the upper left most cell needs to be propagated to all cells in the merged range. 
+
+Mercifully DataNitro provides a function to do exactly this, and this has been incorporated into a WorkbookFunctions function `unmerge_data`. The syntax for using this function is as follows:
+
+`wf.unmerge_data(start_row_dict, end_row_dict, cols_list[, headers_only]`
+
+|     |     |
+| --- | --- |
+| `start_row_dict`: | dictionary of start rows as created by `wf.FindPoints` |
+| `end_row_dict`: | dictionary of end rows as created by `wf.FindPoints`  |
+| `cols_list`: | list of integers representing the columns to be unmerged |
+| `headers_only` | (Optional) bool. Default is `True` |
+| **Returns** | None |
+
+The function unmerges cells in the columns represented by the integers in the `cols_list`.
+
+By default `headers_only` is `True` and this means only cells in the first row on each sheet will be unmerged (that row represented by the integer in the `start_row_dict` - this should represent the headers if created as described above in relation to `wf.FindPoints`). If `headers_only` is `False` then all cells in the column until the row represented by the integer in `end_row_dict` will be unmerged (where they are in fact merged). The values of the 	merged cell are propagated to all cells in the merged range.
+
+>Use this function sparingly (but comprehensively) as it is quite slow to execute. 
+
+**THE END**
 
 
 
