@@ -373,7 +373,7 @@ The regular expression that would identify the date component of all of these st
 
 If you are unclear as to why, then please follow the above link and revise regular expressions. 
 
-The date portion of each filename when identified by the regular expression search is then converted to a `datetime.date()` object using the `shutil` date parser, which assumes that the day comes first (rather than month) and the `fuzzy` option is set to `True` (see source code). This means the date will be converted as best as it can be. If this automated method is creating bizarre results, then you probably have a date string that the `shutil` parser cannot deal with. In such situations you can pass the `strp_format` argument to have more control over how the conversion to `datetime.date()` is made. 
+The date portion of each filename when identified by the regular expression search is then converted to a `datetime.date()` object using the `dateutil` date parser, which assumes that the day comes first (rather than month) and the `fuzzy` option is set to `True` (see source code). This means the date will be converted as best as it can be. If this automated method is creating bizarre results, then you probably have a date string that the `dateutil` parser cannot deal with. In such situations you can pass the `strp_format` argument to have more control over how the conversion to `datetime.date()` is made. 
 
 >The output dict should be examined carefully by the user.
 
