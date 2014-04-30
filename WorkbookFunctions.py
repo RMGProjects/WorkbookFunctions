@@ -524,7 +524,7 @@ class sheet_compiler:
 			raise _InputError('Specify at least one kwarg (folder path)')
 		self.file_dict = kwargs
 		
-	def get_file_dict(self):
+	def get_file_list_dict(self):
 		"""
 		return 	: dict
 		method	: visible
@@ -730,8 +730,9 @@ def rename_sheets(prefix):
 	Renames sheets according to prefix + two digit serial
 	"""
 	sheets = all_sheets()
-	codeList = list(itertools.chain(*[[prefix + '0' + str(x) for x in xrange(1, 10)], 
-									  [prefix + str(x) for x in xrange(10, 100)]]))
+	codeList = list(itertools.chain(*[[prefix + '00' + str(x) for x in xrange(1, 10)], 
+									  [prefix + '0' + str(x) for x in xrange(10, 100)],
+									  [prefix + str(x) for x in xrange(100, 181)]]))
 	try:
 		for x in xrange(len(sheets)):
 			active_sheet(sheets[x])
