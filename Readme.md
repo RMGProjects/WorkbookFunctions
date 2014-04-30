@@ -11,7 +11,7 @@ This library of functions was developed to meet the needs of the RMG Data Team w
 
 The aim of the library is to assist in the following stages of creating data sets from data provided as part of the RMG projects:
 
-+ Consolidate data on excel worksheets in a number of excel files in the same directory into a single workbook
++ Consolidate data on excel worksheets in a number of excel files in a number of directories into a single workbook
 + Renaming sheets in a consistent manner. 
 + Perform various checks on that workbook, including:
 	+ Making various checks with regard to dates on each sheet
